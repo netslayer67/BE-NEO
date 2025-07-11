@@ -29,7 +29,6 @@ const createTransporter = () => {
 export const sendOrderStatusUpdateEmail = async (order: IOrder): Promise<void> => {
   const transporter = createTransporter();
   
-  // Jika transporter tidak bisa dibuat (karena .env kosong), hentikan fungsi.
   if (!transporter) {
     return;
   }
@@ -39,10 +38,11 @@ export const sendOrderStatusUpdateEmail = async (order: IOrder): Promise<void> =
     return;
   }
 
+  // Peta subjek email ini sudah mencakup semua status yang diperlukan.
   const subjectMap = {
     'Processing': `Pesanan Anda #${order.orderId} Telah Dikonfirmasi!`,
-    'Shipped': `Pesanan Anda #${order.orderId} Telah Dikirim!`,
-    'Fulfilled': `Pesanan Anda #${order.orderId} Telah Selesai!`,
+    'Shipped': `Pesanan Anda #${order.orderId} Telah Dikirim!`, // <-- Sudah ada
+    'Fulfilled': `Pesanan Anda #${order.orderId} Telah Selesai!`, // <-- Sudah ada
     'Cancelled': `Pesanan Anda #${order.orderId} Dibatalkan.`,
   };
 
@@ -78,7 +78,7 @@ export const sendOrderStatusUpdateEmail = async (order: IOrder): Promise<void> =
           <td align="center">
             <div class="container">
               <div class="header">
-                <h1>RADIANT</h1>
+                <h1>NEO DERVISH</h1>
               </div>
               <div class="content">
                 <h2>Halo ${order.user.name},</h2>
@@ -102,7 +102,7 @@ export const sendOrderStatusUpdateEmail = async (order: IOrder): Promise<void> =
                 <p>Kami akan memberitahu Anda kembali jika ada pembaruan lebih lanjut. Anda juga bisa melihat detail pesanan di halaman profil Anda.</p>
               </div>
               <div class="footer">
-                &copy; ${new Date().getFullYear()} Radiant. All Rights Reserved.
+                &copy; ${new Date().getFullYear()} Neo Dervish. All Rights Reserved.
               </div>
             </div>
           </td>

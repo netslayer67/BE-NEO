@@ -1,18 +1,29 @@
 import { User } from '@/models/user.model';
+import { Order } from '@/models/order.model'; // <-- 1. Impor model Order
 import { ApiError } from '@/errors/apiError';
-import { IUser } from '@/types';
+import { IUser, IOrder } from '@/types'; // <-- 2. Impor tipe IOrder
 
 /**
- * Mendapatkan profil pengguna berdasarkan ID.
+ * Mendapatkan profil pengguna beserta seluruh riwayat pesanannya.
  * @param userId - ID pengguna.
- * @returns Dokumen pengguna tanpa password.
+ * @returns Objek yang berisi profil pengguna dan daftar pesanan.
  */
-export const getUserProfile = async (userId: string): Promise<IUser> => {
-  const user = await User.findById(userId);
+export const getUserProfile = async (userId: string): Promise<{ profile: IUser, orders: IOrder[] }> => {
+  // 3. Gunakan Promise.all untuk mengambil data user dan order secara bersamaan
+  const [user, orders] = await Promise.all([
+    User.findById(userId),
+    Order.find({ 'user._id': userId }).sort({ createdAt: -1 }) // Ambil semua order milik user, diurutkan dari yang terbaru
+  ]);
+
   if (!user) {
     throw new ApiError(404, 'User not found.');
   }
-  return user;
+
+  // 4. Kembalikan objek yang berisi profil dan daftar pesanan
+  return {
+    profile: user,
+    orders: orders
+  };
 };
 
 /**

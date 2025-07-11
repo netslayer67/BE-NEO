@@ -5,11 +5,36 @@ import * as adminService from './admin.service'; // Impor semua service sebagai 
 export const confirmPaymentHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const updatedOrder = await adminService.confirmOrderPayment(req.params.orderId);
-        return new ApiResponse(res, 200, 'Payment confirmed and order status updated.', updatedOrder);
+        return new ApiResponse(res, 200, 'Payment confirmed and order status updated to Processing.', updatedOrder);
     } catch (error) {
         next(error);
     }
 };
+
+/**
+ * (BARU) Handler untuk mengubah status pesanan menjadi 'Shipped'.
+ */
+export const shipOrderHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const updatedOrder = await adminService.shipOrder(req.params.orderId);
+        return new ApiResponse(res, 200, 'Order status updated to Shipped.', updatedOrder);
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * (BARU) Handler untuk mengubah status pesanan menjadi 'Fulfilled'.
+ */
+export const fulfillOrderHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const updatedOrder = await adminService.fulfillOrder(req.params.orderId);
+        return new ApiResponse(res, 200, 'Order status updated to Fulfilled.', updatedOrder);
+    } catch (error) {
+        next(error);
+    }
+};
+
 
 // === Dashboard ===
 export const getDashboardStatsHandler = async (req: Request, res: Response, next: NextFunction) => {
@@ -56,4 +81,29 @@ export const deleteUserHandler = async (req: Request, res: Response, next: NextF
     } catch (error) {
         next(error);
     }
+};
+
+/**
+ * @description (Admin) Mengambil semua pesanan dari semua pengguna.
+ */
+export const getAllOrdersHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const orders = await adminService.getAllOrders();
+    return new ApiResponse(res, 200, 'All orders fetched successfully', orders);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @description (Admin) Mengambil detail satu pesanan berdasarkan ID.
+ * @param {string} req.params.id - ID unik dari pesanan.
+ */
+export const getOrderByIdHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const order = await adminService.getOrderById(req.params.id);
+    return new ApiResponse(res, 200, 'Order details fetched successfully', order);
+  } catch (error) {
+    next(error);
+  }
 };
