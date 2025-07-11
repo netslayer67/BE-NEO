@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "nodemon",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "vercel-build": "tsc" 
   },
   "keywords": [],
   "author": "",
