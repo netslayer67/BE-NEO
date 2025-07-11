@@ -24,7 +24,7 @@ const orderSchema = new Schema<IOrder>({
   },
   status: {
     type: String,
-    enum: ['Pending Payment', 'Processing', 'Shipped', 'Fulfilled', 'Cancelled'],
+    enum: ['Pending Payment', 'Diproses', 'Dikirim', 'Telah Sampai', 'Cancelled'],
     default: 'Pending Payment', // <-- Status default saat order dibuat
   },
   paymentProof: { type: String },

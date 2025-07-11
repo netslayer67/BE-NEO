@@ -8,13 +8,13 @@ export const getDashboardStats = async () => {
     // Hitung total pendapatan dari pesanan yang statusnya BUKAN 'Pending Payment' atau 'Cancelled'.
     // Ini lebih akurat mencerminkan pesanan yang sudah terbayar atau sedang diproses.
     const totalRevenueResult = await Order.aggregate([
-        { $match: { status: { $in: ['Processing', 'Shipped', 'Fulfilled'] } } },
+        { $match: { status: { $in: ['Diproses', 'Dikirim', 'Telah Sampai'] } } },
         { $group: { _id: null, total: { $sum: '$totalAmount' } } },
     ]);
 
     // Hitung jumlah total penjualan dengan logika yang sama.
     const totalSales = await Order.countDocuments({
-        status: { $in: ['Processing', 'Shipped', 'Fulfilled'] }
+        status: { $in: ['Diproses', 'Dikirim', 'Telah Sampai'] }
     });
 
     // --- Disempurnakan ---
@@ -35,9 +35,9 @@ export const getDashboardStats = async () => {
     
     const statusSummary = {
         pending: orderStatusCounts.find(s => s.status === 'Pending Payment')?.count || 0,
-        processing: orderStatusCounts.find(s => s.status === 'Processing')?.count || 0,
-        shipped: orderStatusCounts.find(s => s.status === 'Shipped')?.count || 0,
-        fulfilled: orderStatusCounts.find(s => s.status === 'Fulfilled')?.count || 0,
+        processing: orderStatusCounts.find(s => s.status === 'Dikirim')?.count || 0,
+        shipped: orderStatusCounts.find(s => s.status === 'Dikirim')?.count || 0,
+        fulfilled: orderStatusCounts.find(s => s.status === 'Telah Sampai')?.count || 0,
         cancelled: orderStatusCounts.find(s => s.status === 'Cancelled')?.count || 0,
     };
 
