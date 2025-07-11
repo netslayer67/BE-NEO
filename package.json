@@ -4,13 +4,13 @@
   "description": "Backend for Radiant Rage",
   "main": "dist/server.js",
   "_moduleAliases": {
-    "@": "dist"
+    "@": "dist/src"
   },
   "scripts": {
     "dev": "nodemon",
     "build": "tsc",
     "start": "node dist/server.js",
-    "vercel-build": "tsc" 
+    "vercel-build": "tsc"
   },
   "keywords": [],
   "author": "",
