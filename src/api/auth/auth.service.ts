@@ -1,6 +1,6 @@
-import { User } from '@/models/user.model';
-import { generateToken } from '@/utils/jwt';
-import { ApiError } from '@/errors/apiError';
+import { User } from '../../models/user.model';
+import { generateToken } from '../../utils/jwt';
+import { ApiError } from '../../errors/apiError';
 import { ILoginInput, IRegisterInput } from './auth.validation';
 
 export const registerUser = async (input: IRegisterInput) => {

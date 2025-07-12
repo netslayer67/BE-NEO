@@ -1,7 +1,7 @@
-import { Order } from '@/models/order.model';
-import { User } from '@/models/user.model';
-import { Product } from '@/models/product.model';
-import { IOrder } from '@/types';
+import { Order } from '../../models/order.model';
+import { User } from '../../models/user.model';
+import { Product } from '../../models/product.model';
+import { IOrder } from '../../types/index';
 
 export const getDashboardStats = async () => {
     // --- Diperbaiki ---

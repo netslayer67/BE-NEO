@@ -1,9 +1,9 @@
 // 📁 src/middlewares/auth.middleware.ts
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { User } from '@/models/user.model';
-import { ApiError } from '@/errors/apiError';
-import { IUser } from '@/types';
+import { User } from '../models/user.model';
+import { ApiError } from '../errors/apiError';
+import { IUser } from '../types/index';
 
 export interface IRequest extends Request {
   user?: IUser;

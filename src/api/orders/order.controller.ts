@@ -1,12 +1,12 @@
 import { Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
-import { Order } from '@/models/order.model';
-import { IRequest } from '@/middlewares/auth.middleware';
-import { ApiResponse } from '@/utils/apiResponse';
-import { ApiError } from '@/errors/apiError';
-import { Product } from '@/models/product.model';
-import { IOrderItem, IShippingAddress } from '@/types';
+import { Order } from '../../models/order.model';
+import { IRequest } from '../../middlewares/auth.middleware';
+import { ApiResponse } from '../../utils/apiResponse';
+import { ApiError } from '../../errors/apiError';
+import { Product } from '../../models/product.model';
+import { IOrderItem, IShippingAddress } from '../../types/index';
 
 // =================================================================
 // PERBAIKAN UTAMA ADA DI SINI

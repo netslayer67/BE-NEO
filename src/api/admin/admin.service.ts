@@ -1,10 +1,10 @@
 // src/services/admin.service.ts
-import { User } from '@/models/user.model';
-import { Order } from '@/models/order.model';
-import { ApiError } from '@/errors/apiError';
-import { IUser, IOrder } from '@/types';
+import { User } from '../../models/user.model';
+import { Order } from '../../models/order.model';
+import { ApiError } from '../../errors/apiError';
+import { IUser, IOrder } from '../../types/index';
 import { getDashboardStats as getStats } from './dashboard.service';
-import { sendOrderStatusUpdateEmail } from '@/services/email.service';
+import { sendOrderStatusUpdateEmail } from '../../services/email.service';
 
 // === User Management ===
 

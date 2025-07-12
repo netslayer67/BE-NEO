@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { registerUser, loginUser } from './auth.service';
-import { ApiResponse } from '@/utils/apiResponse';
+import { ApiResponse } from '../../utils/apiResponse';
 
 export const registerHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {

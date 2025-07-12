@@ -1,7 +1,7 @@
-import { User } from '@/models/user.model';
-import { Order } from '@/models/order.model'; // <-- 1. Impor model Order
-import { ApiError } from '@/errors/apiError';
-import { IUser, IOrder } from '@/types'; // <-- 2. Impor tipe IOrder
+import { User } from '../../models/user.model';
+import { Order } from '../../models/order.model'; // <-- 1. Impor model Order
+import { ApiError } from '../../errors/apiError';
+import { IUser, IOrder } from '../../types/index'; // <-- 2. Impor tipe IOrder
 
 /**
  * Mendapatkan profil pengguna beserta seluruh riwayat pesanannya.

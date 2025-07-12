@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { IOrder } from '@/types';
+import { IOrder } from '../types/index';
 
 /**
  * Membuat transporter Nodemailer yang dapat digunakan kembali.

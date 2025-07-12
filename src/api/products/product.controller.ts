@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import { Product } from '@/models/product.model';
-import { ApiResponse } from '@/utils/apiResponse';
-import { ApiError } from '@/errors/apiError';
+import { Product } from '../../models/product.model';
+import { ApiResponse } from '../../utils/apiResponse';
+import { ApiError } from '../../errors/apiError';
 import slugify from 'slugify'; // `npm install slugify`
-import { uploadImages } from '@/services/imagekit.service';
+import { uploadImages } from '../../services/imagekit.service';
 
 // --- SIMULASI UPLOAD KE CLOUD ---
 // Di aplikasi produksi, fungsi ini akan mengupload buffer ke S3/Cloudinary

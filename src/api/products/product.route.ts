@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { protect, admin } from '@/middlewares/auth.middleware';
-import { uploadProductImages } from '@/middlewares/upload.middleware';
+import { protect, admin } from '../../middlewares/auth.middleware';
+import { uploadProductImages } from '../../middlewares/upload.middleware';
 import {
   createProductHandler,
   getAllProductsHandler,

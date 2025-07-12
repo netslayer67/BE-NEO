@@ -1,5 +1,5 @@
 import multer from 'multer';
-import { ApiError } from '@/errors/apiError';
+import { ApiError } from '../errors/apiError';
 
 // Konfigurasi penyimpanan di memori, bukan di disk.
 // Ini adalah praktik terbaik untuk skalabilitas, karena file bisa langsung

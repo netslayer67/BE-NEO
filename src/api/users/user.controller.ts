@@ -1,8 +1,8 @@
 import { Response, NextFunction } from 'express';
-import { IRequest } from '@/middlewares/auth.middleware';
+import { IRequest } from '../../middlewares/auth.middleware';
 import { getUserProfile, updateUserProfile } from './user.service';
-import { ApiResponse } from '@/utils/apiResponse';
-import { ApiError } from '@/errors/apiError';
+import { ApiResponse } from '../../utils/apiResponse';
+import { ApiError } from '../../errors/apiError';
 
 /**
  * Handler untuk mendapatkan profil pengguna yang sedang login.

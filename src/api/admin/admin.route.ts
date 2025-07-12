@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { protect, admin } from '@/middlewares/auth.middleware';
+import { protect, admin } from '../../middlewares/auth.middleware';
 import {
     getDashboardStatsHandler,
     getAllUsersHandler,

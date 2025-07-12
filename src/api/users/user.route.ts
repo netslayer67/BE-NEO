@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { protect } from '@/middlewares/auth.middleware';
+import { protect } from '../../middlewares/auth.middleware';
 import { getMyProfileHandler, updateMyProfileHandler } from './user.controller';
 
 const router = Router();

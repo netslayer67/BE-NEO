@@ -1,5 +1,5 @@
 import { Schema, model } from 'mongoose';
-import { IOrder } from '@/types';
+import { IOrder } from '../types/index';
 
 const orderSchema = new Schema<IOrder>({
   orderId: { type: String, required: true, unique: true },
