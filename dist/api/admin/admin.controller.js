@@ -43,7 +43,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getOrderByIdHandler = exports.getAllOrdersHandler = exports.deleteUserHandler = exports.updateUserHandler = exports.getUserByIdHandler = exports.getAllUsersHandler = exports.getDashboardStatsHandler = exports.fulfillOrderHandler = exports.shipOrderHandler = exports.confirmPaymentHandler = void 0;
-const apiResponse_1 = require("@/utils/apiResponse");
+const apiResponse_1 = require("../../utils/apiResponse");
 const adminService = __importStar(require("./admin.service")); // Impor semua service sebagai adminService
 const confirmPaymentHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {

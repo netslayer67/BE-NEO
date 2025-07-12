@@ -15,7 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.uploadImages = void 0;
 const imagekit_1 = __importDefault(require("imagekit"));
 const sharp_1 = __importDefault(require("sharp"));
-const apiError_1 = require("@/errors/apiError");
+const apiError_1 = require("../errors/apiError");
 // Pastikan semua variabel environment ada
 if (!process.env.IMAGEKIT_PUBLIC_KEY || !process.env.IMAGEKIT_PRIVATE_KEY || !process.env.IMAGEKIT_URL_ENDPOINT) {
     throw new Error("FATAL ERROR: ImageKit credentials are not defined in .env file.");

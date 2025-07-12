@@ -10,7 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validate = void 0;
-const apiError_1 = require("@/errors/apiError");
+const apiError_1 = require("../errors/apiError");
 const validate = (schema) => (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         yield schema.parseAsync({

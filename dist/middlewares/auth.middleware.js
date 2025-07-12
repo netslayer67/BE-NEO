@@ -14,8 +14,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.admin = exports.protect = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const user_model_1 = require("@/models/user.model");
-const apiError_1 = require("@/errors/apiError");
+const user_model_1 = require("../models/user.model");
+const apiError_1 = require("../errors/apiError");
 const protect = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     let token;
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {

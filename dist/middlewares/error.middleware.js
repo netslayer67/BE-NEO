@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.errorHandler = exports.notFoundHandler = void 0;
-const apiError_1 = require("@/errors/apiError");
+const apiError_1 = require("../errors/apiError");
 const notFoundHandler = (req, res, next) => {
     const error = new apiError_1.ApiError(404, `Not Found - ${req.originalUrl}`);
     next(error);

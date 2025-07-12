@@ -15,10 +15,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getOrderByIdHandler = exports.getMyOrdersHandler = exports.cancelOrderHandler = exports.createOrderHandler = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const uuid_1 = require("uuid");
-const order_model_1 = require("@/models/order.model");
-const apiResponse_1 = require("@/utils/apiResponse");
-const apiError_1 = require("@/errors/apiError");
-const product_model_1 = require("@/models/product.model");
+const order_model_1 = require("../../models/order.model");
+const apiResponse_1 = require("../../utils/apiResponse");
+const apiError_1 = require("../../errors/apiError");
+const product_model_1 = require("../../models/product.model");
 // =================================================================
 // PERBAIKAN UTAMA ADA DI SINI
 // =================================================================

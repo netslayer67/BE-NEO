@@ -10,9 +10,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getDashboardStats = void 0;
-const order_model_1 = require("@/models/order.model");
-const user_model_1 = require("@/models/user.model");
-const product_model_1 = require("@/models/product.model");
+const order_model_1 = require("../../models/order.model");
+const user_model_1 = require("../../models/user.model");
+const product_model_1 = require("../../models/product.model");
 const getDashboardStats = () => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c, _d, _e;
     // --- Diperbaiki ---

@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const auth_middleware_1 = require("@/middlewares/auth.middleware");
+const auth_middleware_1 = require("../../middlewares/auth.middleware");
 const order_controller_1 = require("./order.controller");
 const router = (0, express_1.Router)();
 // Middleware 'protect' akan diterapkan ke semua rute di bawah ini

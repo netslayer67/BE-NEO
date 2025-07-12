@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.uploadProductImages = void 0;
 const multer_1 = __importDefault(require("multer"));
-const apiError_1 = require("@/errors/apiError");
+const apiError_1 = require("../errors/apiError");
 // Konfigurasi penyimpanan di memori, bukan di disk.
 // Ini adalah praktik terbaik untuk skalabilitas, karena file bisa langsung
 // diproses dan di-stream ke layanan cloud (S3, Cloudinary, dll.)

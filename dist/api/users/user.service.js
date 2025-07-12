@@ -10,9 +10,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateUserProfile = exports.getUserProfile = void 0;
-const user_model_1 = require("@/models/user.model");
-const order_model_1 = require("@/models/order.model"); // <-- 1. Impor model Order
-const apiError_1 = require("@/errors/apiError");
+const user_model_1 = require("../../models/user.model");
+const order_model_1 = require("../../models/order.model"); // <-- 1. Impor model Order
+const apiError_1 = require("../../errors/apiError");
 /**
  * Mendapatkan profil pengguna beserta seluruh riwayat pesanannya.
  * @param userId - ID pengguna.

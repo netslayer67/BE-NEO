@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const auth_middleware_1 = require("@/middlewares/auth.middleware");
-const upload_middleware_1 = require("@/middlewares/upload.middleware");
+const auth_middleware_1 = require("../../middlewares/auth.middleware");
+const upload_middleware_1 = require("../../middlewares/upload.middleware");
 const product_controller_1 = require("./product.controller");
 const router = (0, express_1.Router)();
 // Rute untuk mendapatkan semua produk (publik) dan membuat produk baru (admin)

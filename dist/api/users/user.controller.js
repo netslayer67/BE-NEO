@@ -11,8 +11,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateMyProfileHandler = exports.getMyProfileHandler = void 0;
 const user_service_1 = require("./user.service");
-const apiResponse_1 = require("@/utils/apiResponse");
-const apiError_1 = require("@/errors/apiError");
+const apiResponse_1 = require("../../utils/apiResponse");
+const apiError_1 = require("../../errors/apiError");
 /**
  * Handler untuk mendapatkan profil pengguna yang sedang login.
  */

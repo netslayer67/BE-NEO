@@ -10,9 +10,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.loginUser = exports.registerUser = void 0;
-const user_model_1 = require("@/models/user.model");
-const jwt_1 = require("@/utils/jwt");
-const apiError_1 = require("@/errors/apiError");
+const user_model_1 = require("../../models/user.model");
+const jwt_1 = require("../../utils/jwt");
+const apiError_1 = require("../../errors/apiError");
 const registerUser = (input) => __awaiter(void 0, void 0, void 0, function* () {
     const userExists = yield user_model_1.User.findOne({ email: input.email });
     if (userExists) {

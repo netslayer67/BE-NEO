@@ -13,11 +13,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteProductHandler = exports.updateProductHandler = exports.getProductBySlugHandler = exports.getAllProductsHandler = exports.createProductHandler = void 0;
-const product_model_1 = require("@/models/product.model");
-const apiResponse_1 = require("@/utils/apiResponse");
-const apiError_1 = require("@/errors/apiError");
+const product_model_1 = require("../../models/product.model");
+const apiResponse_1 = require("../../utils/apiResponse");
+const apiError_1 = require("../../errors/apiError");
 const slugify_1 = __importDefault(require("slugify")); // `npm install slugify`
-const imagekit_service_1 = require("@/services/imagekit.service");
+const imagekit_service_1 = require("../../services/imagekit.service");
 // --- SIMULASI UPLOAD KE CLOUD ---
 // Di aplikasi produksi, fungsi ini akan mengupload buffer ke S3/Cloudinary
 // dan mengembalikan URL publiknya.

@@ -11,11 +11,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getDashboardStats = exports.getOrderById = exports.getAllOrders = exports.fulfillOrder = exports.shipOrder = exports.confirmOrderPayment = exports.deleteUserById = exports.updateUserById = exports.getUserById = exports.getAllUsers = void 0;
 // src/services/admin.service.ts
-const user_model_1 = require("@/models/user.model");
-const order_model_1 = require("@/models/order.model");
-const apiError_1 = require("@/errors/apiError");
+const user_model_1 = require("../../models/user.model");
+const order_model_1 = require("../../models/order.model");
+const apiError_1 = require("../../errors/apiError");
 const dashboard_service_1 = require("./dashboard.service");
-const email_service_1 = require("@/services/email.service");
+const email_service_1 = require("../../services/email.service");
 // === User Management ===
 const getAllUsers = () => __awaiter(void 0, void 0, void 0, function* () {
     return user_model_1.User.find({}).select('-password');
