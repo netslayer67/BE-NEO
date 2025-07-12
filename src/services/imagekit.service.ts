@@ -1,6 +1,6 @@
 import ImageKit from 'imagekit';
 import sharp from 'sharp';
-import { ApiError } from '@/errors/apiError';
+import { ApiError } from '../errors/apiError';
 
 // Pastikan semua variabel environment ada
 
