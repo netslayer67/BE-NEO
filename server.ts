@@ -11,6 +11,7 @@ import { errorHandler, notFoundHandler } from './src/middlewares/error.middlewar
 /**
  * Fungsi utama untuk memulai aplikasi.
  * Ini memastikan semua koneksi siap sebelum server menerima permintaan.
+ * make an update node version in vercel
  */
 const startServer = async () => {
   try {
