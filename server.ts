@@ -4,9 +4,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 import cors from 'cors';
 import helmet from 'helmet';
-import apiRoutes from './api';
-import connectDB from './config/database';
-import { errorHandler, notFoundHandler } from './middlewares/error.middleware';
+import apiRoutes from './src/api/index';
+import connectDB from './src/config/database';
+import { errorHandler, notFoundHandler } from './src/middlewares/error.middleware';
 
 /**
  * Fungsi utama untuk memulai aplikasi.
