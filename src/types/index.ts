@@ -44,6 +44,14 @@ export interface IUser extends Document {
 }
 
 /**
+ * @description Struktur gambar untuk setiap produk.
+ */
+export interface IProductImage {
+  url: string;
+  alt: string;
+}
+
+/**
  * @description Merepresentasikan dokumen Produk (Product) di database.
  */
 export interface IProduct extends Document {
@@ -52,10 +60,10 @@ export interface IProduct extends Document {
   description: string;
   price: number;
   category: string;
-  images: string[];
+  images: IProductImage[]; // <- updated
   stock: number;
-  createdAt: Date; // Timestamps
-  updatedAt: Date; // Timestamps
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /**

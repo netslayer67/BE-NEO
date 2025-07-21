@@ -6,6 +6,7 @@ import {
     getOrderByIdHandler,
     cancelOrderHandler // <-- 1. Impor handler baru untuk pembatalan
 } from './order.controller';
+import { midtransWebhookHandler } from './order.webhook';
 
 const router = Router();
 
@@ -24,5 +25,8 @@ router.put('/:orderId/cancel', cancelOrderHandler); // <-- 2. Tambahkan rute unt
 // Rute untuk mendapatkan detail satu pesanan spesifik
 // Diletakkan terakhir agar tidak konflik dengan rute '/cancel'
 router.get('/:id', getOrderByIdHandler);       // GET  /api/v1/orders/:orderId
+
+// ✅ Public Midtrans webhook endpoint
+router.post('/webhook', midtransWebhookHandler);
 
 export default router;
