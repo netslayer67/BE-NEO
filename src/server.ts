@@ -35,15 +35,17 @@ io.on('connection', (socket) => {
   });
 });
 
-// Middlewares
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://radiantrage.vercel.app');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  next();
-});
+const CLIENT_ORIGIN = process.env.FRONTEND_URL || '*';
 
+app.use(cors({
+  origin: CLIENT_ORIGIN,
+  credentials: true
+}));
+
+app.options('*', cors({
+  origin: CLIENT_ORIGIN,
+  credentials: true
+}));
 app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
