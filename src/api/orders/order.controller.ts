@@ -1,7 +1,6 @@
 import { Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
-
 import { Order } from '../../models/order.model';
 import { Product } from '../../models/product.model';
 import { IRequest } from '../../middlewares/auth.middleware';
@@ -21,17 +20,21 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
   if (session) session.startTransaction();
 
   try {
-    const { items, shippingAddress } = req.body as {
+    const { items, shippingAddress, paymentMethod } = req.body as {
       items: IOrderItem[];
       shippingAddress: IShippingAddress;
+      paymentMethod: 'online' | 'offline';
     };
 
     if (!req.user) throw new ApiError(401, 'User not authenticated.');
     if (!items || items.length === 0) throw new ApiError(400, 'Order items cannot be empty.');
+    if (!['online', 'offline'].includes(paymentMethod)) {
+      throw new ApiError(400, 'Invalid payment method.');
+    }
 
-    let calculatedTotalAmount = 0;
-    const processedItems: IOrderItem[] = [];
     const opts = { session };
+    let itemsPrice = 0;
+    const processedItems: IOrderItem[] = [];
 
     for (const item of items) {
       const product = await Product.findById(item.product).setOptions(opts);
@@ -43,9 +46,10 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
       product.stock -= item.quantity;
       await product.save(opts);
 
-      calculatedTotalAmount += product.price * item.quantity;
+      itemsPrice += product.price * item.quantity;
+
       processedItems.push({
-        product: product,
+        product,
         name: product.name,
         quantity: item.quantity,
         price: product.price
@@ -53,6 +57,12 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
     }
 
     const orderId = `NEO-${Date.now()}-${uuidv4().substring(0, 4).toUpperCase()}`;
+    const shippingPrice = 15000;
+    const adminFee = paymentMethod === 'offline' ? 2500 : 0;
+    const onlineDiscount = paymentMethod === 'online' ? 3000 : 0;
+
+    const totalAmount = itemsPrice + shippingPrice + adminFee - onlineDiscount;
+
     const newOrder = new Order({
       orderId,
       user: {
@@ -61,9 +71,14 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
         email: req.user.email
       },
       items: processedItems,
-      totalAmount: calculatedTotalAmount,
       shippingAddress,
-      status: 'Pending Payment'
+      paymentMethod,
+      itemsPrice,
+      shippingPrice,
+      adminFee,
+      discount: onlineDiscount,
+      totalAmount,
+      status: paymentMethod === 'online' ? 'Pending Payment' : 'Diproses'
     });
 
     await newOrder.save(opts);
@@ -72,7 +87,7 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
     io.emit('new-order', {
       orderId: newOrder.orderId,
       user: req.user.name,
-      total: calculatedTotalAmount
+      total: totalAmount
     });
 
     // Emit status awal ke admin
@@ -83,18 +98,26 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
       totalAmount: newOrder.totalAmount
     });
 
-    // Midtrans: Buat transaksi pembayaran
-    const midtransRes = await createTransaction(orderId, calculatedTotalAmount, {
-      first_name: req.user.name,
-      email: req.user.email
-    });
+    // Midtrans hanya jika metode online
+    let midtransSnapToken: string | null = null;
+    let redirectUrl: string | null = null;
+
+    if (paymentMethod === 'online') {
+      const midtransRes = await createTransaction(orderId, totalAmount, {
+        first_name: req.user.name,
+        email: req.user.email
+      });
+
+      midtransSnapToken = midtransRes.token;
+      redirectUrl = midtransRes.redirect_url;
+    }
 
     if (session) await session.commitTransaction();
 
     return new ApiResponse(res, 201, 'Order created successfully.', {
       order: newOrder,
-      midtransSnapToken: midtransRes.token,
-      redirectUrl: midtransRes.redirect_url
+      midtransSnapToken,
+      redirectUrl
     });
   } catch (error) {
     if (session) await session.abortTransaction();
@@ -103,6 +126,7 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
     if (session) session.endSession();
   }
 };
+
 
 /**
  * @desc Membatalkan pesanan dan mengembalikan stok
@@ -123,7 +147,10 @@ export const cancelOrderHandler = async (req: IRequest, res: Response, next: Nex
     }).setOptions(opts);
 
     if (!order) throw new ApiError(404, 'Order not found.');
-    if (order.status !== 'Pending Payment') {
+
+    // Perbaikan di sini
+    const cancellableStatuses = ['Pending Payment', 'Diproses'];
+    if (!cancellableStatuses.includes(order.status)) {
       throw new ApiError(400, `Cannot cancel order with status '${order.status}'.`);
     }
 
@@ -146,6 +173,7 @@ export const cancelOrderHandler = async (req: IRequest, res: Response, next: Nex
     if (session) session.endSession();
   }
 };
+
 
 /**
  * @desc Mendapatkan semua pesanan milik user yang login

@@ -4,6 +4,7 @@ import productRoutes from './products/product.route';
 import orderRoutes from './orders/order.route';
 import adminRoutes from './admin/admin.route';
 import userRoutes from './users/user.route'; // <--- 1. Impor rute user
+import paymentRoutes from './payment/payment.route';
 
 const router = Router();
 
@@ -16,6 +17,7 @@ router.use('/products', productRoutes);
 // Rute Terproteksi (memerlukan login)
 router.use('/orders', orderRoutes);
 router.use('/users', userRoutes); // <--- 2. Daftarkan rute user di sini
+router.use('/payment', paymentRoutes);
 
 // Rute Khusus Admin
 router.use('/admin', adminRoutes);

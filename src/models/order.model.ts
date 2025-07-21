@@ -14,7 +14,10 @@ const orderSchema = new Schema<IOrder>({
     quantity: { type: Number, required: true },
     price: { type: Number, required: true },
   }],
+  
   totalAmount: { type: Number, required: true },
+  adminFee: { type: Number, default: 0 },
+discount: { type: Number, default: 0 },
   shippingAddress: {
     street: String,
     city: String,
@@ -22,12 +25,18 @@ const orderSchema = new Schema<IOrder>({
     country: String,
     phone: String,
   },
+  paymentMethod: {
+  type: String,
+  enum: ['online','offline'],
+  default: null,
+},
   status: {
     type: String,
     enum: ['Pending Payment', 'Diproses', 'Dikirim', 'Telah Sampai', 'Cancelled'],
     default: 'Pending Payment', // <-- Status default saat order dibuat
   },
   paymentProof: { type: String },
+  transactionId: { type: String },
 }, { timestamps: true });
 
 export const Order = model<IOrder>('Order', orderSchema);

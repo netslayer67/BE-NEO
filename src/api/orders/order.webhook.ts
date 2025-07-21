@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { Order } from '../../models/order.model';
 import { ApiError } from '../../errors/apiError';
-import { io } from '../../server'; // Pastikan io diexport di server.ts
+import { io } from '../../server';
 import { mapMidtransToInternalStatus } from '../../utils/orderStatusMapper';
-
+import { logger } from '../../utils/logger'; // Tambahkan util logger jika belum ada
 
 /**
  * @desc Handler untuk menerima webhook dari Midtrans
@@ -21,23 +21,28 @@ export const midtransWebhookHandler = async (req: Request, res: Response, next: 
     if (!order) throw new ApiError(404, 'Order not found');
 
     // Update status berdasarkan Midtrans status
- const newStatus = mapMidtransToInternalStatus(transaction_status, fraud_status);
+    const newStatus = mapMidtransToInternalStatus(transaction_status, fraud_status);
 
-if (newStatus) {
-  order.status = newStatus; // ✅ sekarang sudah sesuai type
-  await order.save();
+    if (newStatus) {
+      order.status = newStatus;
+      await order.save();
 
-  io.emit('order-status-updated', {
-    orderId: order.orderId,
-    status: newStatus,
-    user: order.user.name,
-    totalAmount: order.totalAmount
-  });
-}
+      io.emit('order-status-updated', {
+        orderId: order.orderId,
+        status: newStatus,
+        user: order.user.name,
+        totalAmount: order.totalAmount
+      });
+    }
 
-    // Midtrans expects a 200 OK response
     return res.status(200).json({ message: 'Webhook received' });
   } catch (error) {
-    next(error);
+    if (error instanceof Error) {
+      logger.error('Midtrans Webhook Error:', error);
+      next(error);
+    } else {
+      logger.error('Unknown error in Midtrans Webhook:', error);
+      next(new ApiError(500, 'Unexpected error in webhook.'));
+    }
   }
 };

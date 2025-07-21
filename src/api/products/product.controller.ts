@@ -4,6 +4,7 @@ import { ApiResponse } from '../../utils/apiResponse';
 import { ApiError } from '../../errors/apiError';
 import slugify from 'slugify';
 import { uploadImages } from '../../services/imagekit.service';
+import * as productService from './product.service';
 
 // Admin: Create Product (dengan form-data dan upload gambar)
 export const createProductHandler = async (req: Request, res: Response, next: NextFunction) => {
@@ -40,41 +41,9 @@ export const createProductHandler = async (req: Request, res: Response, next: Ne
   }
 };
 
-// Public: Get All Products
 export const getAllProductsHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { category, sortBy, order = 'asc', page = 1, limit = 10 } = req.query;
-
-    const query: any = {};
-    if (category) {
-      query.category = category as string;
-    }
-
-    const sortOptions: any = {};
-    if (sortBy) {
-      sortOptions[sortBy as string] = order === 'desc' ? -1 : 1;
-    } else {
-      sortOptions.createdAt = -1;
-    }
-
-    const pageNum = parseInt(page as string, 10);
-    const limitNum = parseInt(limit as string, 10);
-    const skip = (pageNum - 1) * limitNum;
-
-    const products = await Product.find(query)
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limitNum);
-
-    const totalProducts = await Product.countDocuments(query);
-    const totalPages = Math.ceil(totalProducts / limitNum);
-
-    const pagination = {
-      currentPage: pageNum,
-      totalPages,
-      totalProducts,
-    };
-
+    const { products, pagination } = await productService.getAllProducts(req.query);
     return new ApiResponse(res, 200, 'Products fetched successfully', { products, pagination });
   } catch (error) {
     next(error);

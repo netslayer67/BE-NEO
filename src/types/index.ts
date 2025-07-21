@@ -80,7 +80,11 @@ export interface IOrder extends Document {
   totalAmount: number;
   shippingAddress: IShippingAddress; // Menggunakan interface sub-dokumen
   status: 'Pending Payment' | 'Diproses' | 'Dikirim' | 'Telah Sampai' | 'Cancelled';
+  paymentMethod?: 'online' | 'offline',
   paymentProof?: string;
+  transactionId?: string;
+  adminFee:  number;
+discount: number;
   createdAt: Date; // Timestamps
   updatedAt: Date; // Timestamps
 }
