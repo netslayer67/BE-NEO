@@ -38,7 +38,8 @@ const corsOptions: CorsOptions = {
       callback(new Error('This origin is not allowed by CORS policy.'));
     }
   },
-  credentials: true // Penting jika Anda menggunakan cookies atau header otentikasi
+  credentials: true, // Penting jika Anda menggunakan cookies atau header otentikasi
+  optionsSuccessStatus: 200 // For legacy browser support
 };
 
 
@@ -62,7 +63,12 @@ io.on('connection', (socket) => {
 // --- MIDDLEWARE ---
 
 // Terapkan CORS ke semua rute Express (API)
+// Middleware ini harus menjadi yang pertama untuk menangani preflight request
 app.use(cors(corsOptions));
+
+// Secara eksplisit menangani pre-flight requests di semua rute
+app.options('*', cors(corsOptions));
+
 
 app.use(helmet());
 app.use(express.json());
