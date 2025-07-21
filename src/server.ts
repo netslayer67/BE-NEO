@@ -7,7 +7,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import http from 'http';
 import { Server } from 'socket.io';
-
+import { initializeSocketIO } from './services/socket.service';
 import connectDB from './config/database';
 import apiRoutes from './api';
 import { errorHandler, notFoundHandler } from './middlewares/error.middleware';
@@ -20,11 +20,27 @@ const PORT = process.env.PORT || 5000;
 const httpServer = http.createServer(app);
 
 // Initialize Socket.IO
-export const io = new Server(httpServer, {
+// --- PERBAIKAN DI SINI ---
+const allowedOrigins = [
+    'http://localhost:5173',      // Untuk Vite standar 
+    'https://radiantrage.vercel.app' // Untuk production
+];
+
+const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || '*',
-  },
+    origin: function (origin, callback) {
+      // Izinkan jika origin ada di dalam daftar, atau jika tidak ada origin (seperti dari Postman)
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ["GET", "POST"]
+  }
 });
+
+initializeSocketIO(io);
 
 // Socket.IO: Connection Event
 io.on('connection', (socket) => {
@@ -35,17 +51,7 @@ io.on('connection', (socket) => {
   });
 });
 
-const CLIENT_ORIGIN = process.env.FRONTEND_URL || '*';
-
-app.use(cors({
-  origin: CLIENT_ORIGIN,
-  credentials: true
-}));
-
-app.options('*', cors({
-  origin: CLIENT_ORIGIN,
-  credentials: true
-}));
+app.use(cors()); // Cukup gunakan cors() standar
 app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
