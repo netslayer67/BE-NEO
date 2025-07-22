@@ -17,7 +17,7 @@ const midtrans_client_1 = __importDefault(require("midtrans-client"));
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config(); // Tambahkan ini di awal midtrans.service.ts (opsional jika sudah yakin urutan import benar)
 const snap = new midtrans_client_1.default.Snap({
-    isProduction: process.env.NODE_ENV === 'production',
+    isProduction: false,
     serverKey: process.env.MIDTRANS_SERVER_KEY,
     clientKey: process.env.MIDTRANS_CLIENT_KEY,
 });
