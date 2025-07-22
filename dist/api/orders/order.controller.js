@@ -16,86 +16,124 @@ exports.getOrderByIdHandler = exports.getMyOrdersHandler = exports.cancelOrderHa
 const mongoose_1 = __importDefault(require("mongoose"));
 const uuid_1 = require("uuid");
 const order_model_1 = require("../../models/order.model");
+const product_model_1 = require("../../models/product.model");
 const apiResponse_1 = require("../../utils/apiResponse");
 const apiError_1 = require("../../errors/apiError");
-const product_model_1 = require("../../models/product.model");
-// =================================================================
-// PERBAIKAN UTAMA ADA DI SINI
-// =================================================================
+const midtrans_service_1 = require("../../services/midtrans.service");
+const server_1 = require("../../server"); // Ensure `io` is exported from server.ts
 /**
- * @description Membuat pesanan baru dengan beberapa item produk.
- * Menggunakan transaksi HANYA di lingkungan produksi untuk memastikan integritas data.
+ * @desc Membuat pesanan baru & memproses pembayaran dengan Midtrans
+ * @route POST /api/v1/orders
  */
 const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    // Memulai sesi transaksi HANYA jika di lingkungan 'production'
     const isProduction = process.env.NODE_ENV === 'production';
     const session = isProduction ? yield mongoose_1.default.startSession() : null;
-    if (session) {
+    if (session)
         session.startTransaction();
-    }
     try {
-        const { items, shippingAddress } = req.body;
+        const { items, shippingAddress, paymentMethod } = req.body;
         if (!req.user)
             throw new apiError_1.ApiError(401, 'User not authenticated.');
         if (!items || items.length === 0)
             throw new apiError_1.ApiError(400, 'Order items cannot be empty.');
-        let calculatedTotalAmount = 0;
+        if (!['online', 'offline'].includes(paymentMethod)) {
+            throw new apiError_1.ApiError(400, 'Invalid payment method.');
+        }
+        const opts = { session };
+        let itemsPrice = 0;
         const processedItems = [];
-        const opts = { session }; // Opsi untuk menyertakan sesi dalam query
         for (const item of items) {
             const product = yield product_model_1.Product.findById(item.product).setOptions(opts);
             if (!product)
-                throw new apiError_1.ApiError(404, `Product with id ${item.product} not found.`);
-            if (product.stock < item.quantity)
-                throw new apiError_1.ApiError(400, `Not enough stock for '${product.name}'.`);
+                throw new apiError_1.ApiError(404, `Product with ID ${item.product} not found.`);
+            if (product.stock < item.quantity) {
+                throw new apiError_1.ApiError(400, `Insufficient stock for '${product.name}'.`);
+            }
             product.stock -= item.quantity;
             yield product.save(opts);
-            calculatedTotalAmount += product.price * item.quantity;
+            itemsPrice += product.price * item.quantity;
             processedItems.push({
-                product: product,
+                product,
                 name: product.name,
                 quantity: item.quantity,
                 price: product.price
             });
         }
         const orderId = `NEO-${Date.now()}-${(0, uuid_1.v4)().substring(0, 4).toUpperCase()}`;
+        const shippingPrice = 15000;
+        const adminFee = paymentMethod === 'offline' ? 2500 : 0;
+        const onlineDiscount = paymentMethod === 'online' ? 3000 : 0;
+        const totalAmount = itemsPrice + shippingPrice + adminFee - onlineDiscount;
         const newOrder = new order_model_1.Order({
             orderId,
-            user: { _id: req.user._id, name: req.user.name, email: req.user.email },
+            user: {
+                _id: req.user._id,
+                name: req.user.name,
+                email: req.user.email
+            },
             items: processedItems,
-            totalAmount: calculatedTotalAmount,
             shippingAddress,
-            status: 'Pending Payment',
+            paymentMethod,
+            itemsPrice,
+            shippingPrice,
+            adminFee,
+            discount: onlineDiscount,
+            totalAmount,
+            status: paymentMethod === 'online' ? 'Pending Payment' : 'Diproses'
         });
         yield newOrder.save(opts);
-        if (session) {
-            yield session.commitTransaction();
+        // Emit ke admin bahwa ada pesanan baru
+        server_1.io.emit('new-order', {
+            orderId: newOrder.orderId,
+            user: req.user.name,
+            total: totalAmount
+        });
+        // Emit status awal ke admin
+        server_1.io.emit('order-status-updated', {
+            orderId: newOrder.orderId,
+            status: newOrder.status,
+            user: newOrder.user.name,
+            totalAmount: newOrder.totalAmount
+        });
+        // Midtrans hanya jika metode online
+        let midtransSnapToken = null;
+        let redirectUrl = null;
+        if (paymentMethod === 'online') {
+            const midtransRes = yield (0, midtrans_service_1.createTransaction)(orderId, totalAmount, {
+                first_name: req.user.name,
+                email: req.user.email
+            });
+            midtransSnapToken = midtransRes.token;
+            redirectUrl = midtransRes.redirect_url;
         }
-        return new apiResponse_1.ApiResponse(res, 201, 'Order created successfully.', newOrder);
+        if (session)
+            yield session.commitTransaction();
+        return new apiResponse_1.ApiResponse(res, 201, 'Order created successfully.', {
+            order: newOrder,
+            midtransSnapToken,
+            redirectUrl
+        });
     }
     catch (error) {
-        if (session) {
+        if (session)
             yield session.abortTransaction();
-        }
         next(error);
     }
     finally {
-        if (session) {
+        if (session)
             session.endSession();
-        }
     }
 });
 exports.createOrderHandler = createOrderHandler;
 /**
- * @description Membatalkan pesanan oleh pengguna dan mengembalikan stok produk.
- * Menggunakan transaksi HANYA di lingkungan produksi.
+ * @desc Membatalkan pesanan dan mengembalikan stok
+ * @route PATCH /api/v1/orders/:orderId/cancel
  */
 const cancelOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const isProduction = process.env.NODE_ENV === 'production';
     const session = isProduction ? yield mongoose_1.default.startSession() : null;
-    if (session) {
+    if (session)
         session.startTransaction();
-    }
     try {
         if (!req.user)
             throw new apiError_1.ApiError(401, 'User not authenticated.');
@@ -106,8 +144,11 @@ const cancelOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
         }).setOptions(opts);
         if (!order)
             throw new apiError_1.ApiError(404, 'Order not found.');
-        if (order.status !== 'Pending Payment')
+        // Perbaikan di sini
+        const cancellableStatuses = ['Pending Payment', 'Diproses'];
+        if (!cancellableStatuses.includes(order.status)) {
             throw new apiError_1.ApiError(400, `Cannot cancel order with status '${order.status}'.`);
+        }
         for (const item of order.items) {
             yield product_model_1.Product.findByIdAndUpdate(item.product, {
                 $inc: { stock: item.quantity }
@@ -115,25 +156,25 @@ const cancelOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
         }
         order.status = 'Cancelled';
         yield order.save(opts);
-        if (session) {
+        if (session)
             yield session.commitTransaction();
-        }
         return new apiResponse_1.ApiResponse(res, 200, 'Order has been successfully cancelled.', order);
     }
     catch (error) {
-        if (session) {
+        if (session)
             yield session.abortTransaction();
-        }
         next(error);
     }
     finally {
-        if (session) {
+        if (session)
             session.endSession();
-        }
     }
 });
 exports.cancelOrderHandler = cancelOrderHandler;
-// ... (getMyOrdersHandler dan getOrderByIdHandler tidak perlu diubah)
+/**
+ * @desc Mendapatkan semua pesanan milik user yang login
+ * @route GET /api/v1/orders/my
+ */
 const getMyOrdersHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         if (!req.user)
@@ -146,18 +187,16 @@ const getMyOrdersHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
     }
 });
 exports.getMyOrdersHandler = getMyOrdersHandler;
+/**
+ * @desc Mendapatkan detail pesanan berdasarkan ID
+ * @route GET /api/v1/orders/:_id
+ */
 const getOrderByIdHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        if (!req.user) {
+        if (!req.user)
             throw new apiError_1.ApiError(401, 'User not authenticated.');
-        }
-        const { _id } = req.params; // Ambil _id dari parameter URL
-        // --- PERBAIKAN DI SINI ---
-        // Mencari berdasarkan `_id` dokumen dan memastikan pesanan ini milik pengguna yang login.
-        const order = yield order_model_1.Order.findOne({
-            _id: _id,
-            'user._id': req.user._id
-        });
+        const { _id } = req.params;
+        const order = yield order_model_1.Order.findOne({ _id, 'user._id': req.user._id });
         if (!order) {
             throw new apiError_1.ApiError(404, 'Order not found or you do not have permission to view it.');
         }

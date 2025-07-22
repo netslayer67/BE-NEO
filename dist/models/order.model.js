@@ -16,6 +16,8 @@ const orderSchema = new mongoose_1.Schema({
             price: { type: Number, required: true },
         }],
     totalAmount: { type: Number, required: true },
+    adminFee: { type: Number, default: 0 },
+    discount: { type: Number, default: 0 },
     shippingAddress: {
         street: String,
         city: String,
@@ -23,11 +25,17 @@ const orderSchema = new mongoose_1.Schema({
         country: String,
         phone: String,
     },
+    paymentMethod: {
+        type: String,
+        enum: ['online', 'offline'],
+        default: null,
+    },
     status: {
         type: String,
         enum: ['Pending Payment', 'Diproses', 'Dikirim', 'Telah Sampai', 'Cancelled'],
         default: 'Pending Payment', // <-- Status default saat order dibuat
     },
     paymentProof: { type: String },
+    transactionId: { type: String },
 }, { timestamps: true });
 exports.Order = (0, mongoose_1.model)('Order', orderSchema);
