@@ -8,27 +8,30 @@ import { initializeSocketIO } from './services/socket.service';
 
 const PORT = process.env.PORT || 5000;
 
-// Buat HTTP server dari express app
+// 1. Buat HTTP server dari express app
 const httpServer = http.createServer(app);
 
-// Inisialisasi socket.io
-export const io = new Server(httpServer, {
+// 2. Inisialisasi Socket.IO
+const io = new Server(httpServer, {
   cors: {
     origin: ['http://localhost:5173', 'https://radiantrage.vercel.app'],
     credentials: true,
   },
 });
+
+// 3. Simpan instance Socket.IO agar bisa digunakan modul lain
 initializeSocketIO(io);
 
-// Jalankan koneksi Socket.IO
+// 4. Log saat koneksi masuk
 io.on('connection', (socket) => {
   console.log('[Socket.IO] Connected:', socket.id);
+
   socket.on('disconnect', () => {
     console.log('[Socket.IO] Disconnected:', socket.id);
   });
 });
 
-// Start server
+// 5. Jalankan server
 const startServer = async () => {
   try {
     console.log('[SERVER] Connecting to database...');

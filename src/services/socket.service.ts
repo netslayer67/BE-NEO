@@ -1,20 +1,13 @@
+// src/services/socket.service.ts
 import { Server } from 'socket.io';
 
-let io: Server;
+let io: Server | null = null;
 
-export const initializeSocketIO = (serverIo: Server) => {
-    io = serverIo;
-    io.on('connection', (socket) => {
-        console.log('Klien terhubung:', socket.id);
-        socket.on('disconnect', () => {
-            console.log('Klien terputus:', socket.id);
-        });
-    });
+export const initializeSocketIO = (server: Server) => {
+  io = server;
 };
 
-export const getSocketIO = () => {
-    if (!io) {
-        throw new Error('Socket.IO belum diinisialisasi!');
-    }
-    return io;
+export const getSocketIO = (): Server => {
+  if (!io) throw new Error('Socket.IO belum diinisialisasi!');
+  return io;
 };

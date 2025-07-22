@@ -8,10 +8,7 @@ import { ApiResponse } from '../../utils/apiResponse';
 import { ApiError } from '../../errors/apiError';
 import { IOrderItem, IShippingAddress } from '../../types';
 import { createTransaction } from '../../services/midtrans.service';
-import { getSocketIO } from '../../services/socket.service'; // Ensure `io` is exported from server.ts
-
-const io = getSocketIO();
-
+import { getSocketIO } from '../../services/socket.service';
 
 /**
  * @desc Membuat pesanan baru & memproses pembayaran dengan Midtrans
@@ -87,19 +84,21 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
     await newOrder.save(opts);
 
     // Emit ke admin bahwa ada pesanan baru
-    io.emit('new-order', {
-      orderId: newOrder.orderId,
-      user: req.user.name,
-      total: totalAmount
-    });
+    const io = getSocketIO();
+    if (io) {
+      io.emit('new-order', {
+        orderId: newOrder.orderId,
+        user: req.user.name,
+        total: totalAmount
+      });
 
-    // Emit status awal ke admin
-    io.emit('order-status-updated', {
-      orderId: newOrder.orderId,
-      status: newOrder.status,
-      user: newOrder.user.name,
-      totalAmount: newOrder.totalAmount
-    });
+      io.emit('order-status-updated', {
+        orderId: newOrder.orderId,
+        status: newOrder.status,
+        user: newOrder.user.name,
+        totalAmount: newOrder.totalAmount
+      });
+    }
 
     // Midtrans hanya jika metode online
     let midtransSnapToken: string | null = null;
@@ -151,7 +150,6 @@ export const cancelOrderHandler = async (req: IRequest, res: Response, next: Nex
 
     if (!order) throw new ApiError(404, 'Order not found.');
 
-    // Perbaikan di sini
     const cancellableStatuses = ['Pending Payment', 'Diproses'];
     if (!cancellableStatuses.includes(order.status)) {
       throw new ApiError(400, `Cannot cancel order with status '${order.status}'.`);
@@ -192,6 +190,7 @@ export const getMyOrdersHandler = async (req: IRequest, res: Response, next: Nex
     next(error);
   }
 };
+
 
 /**
  * @desc Mendapatkan detail pesanan berdasarkan ID
