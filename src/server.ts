@@ -60,10 +60,7 @@ io.on('connection', (socket) => {
 });
 
 
-// --- MIDDLEWARE ---
 
-// Terapkan CORS ke semua rute Express (API)
-// Middleware ini harus menjadi yang pertama untuk menangani preflight request
 app.use(cors(corsOptions));
 
 // Secara eksplisit menangani pre-flight requests di semua rute
