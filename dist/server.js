@@ -60,9 +60,6 @@ exports.io.on('connection', (socket) => {
         console.log('[Socket.IO] Disconnected:', socket.id);
     });
 });
-// --- MIDDLEWARE ---
-// Terapkan CORS ke semua rute Express (API)
-// Middleware ini harus menjadi yang pertama untuk menangani preflight request
 app.use((0, cors_1.default)(corsOptions));
 // Secara eksplisit menangani pre-flight requests di semua rute
 app.options('*', (0, cors_1.default)(corsOptions));
