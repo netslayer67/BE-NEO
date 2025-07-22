@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { Order } from '../../models/order.model';
 import { ApiError } from '../../errors/apiError';
-import { io } from '../../server';
+import { getSocketIO } from '../../services/socket.service'; // Ensure `io` is exported from server.ts
 import { mapMidtransToInternalStatus } from '../../utils/orderStatusMapper';
+
+const io = getSocketIO();
 
 /**
  * @desc Handler untuk menerima webhook dari Midtrans

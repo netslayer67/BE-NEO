@@ -12,8 +12,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.midtransWebhookHandler = void 0;
 const order_model_1 = require("../../models/order.model");
 const apiError_1 = require("../../errors/apiError");
-const server_1 = require("../../server");
+const socket_service_1 = require("../../services/socket.service"); // Ensure `io` is exported from server.ts
 const orderStatusMapper_1 = require("../../utils/orderStatusMapper");
+const io = (0, socket_service_1.getSocketIO)();
 /**
  * @desc Handler untuk menerima webhook dari Midtrans
  * @route POST /api/v1/orders/webhook
@@ -29,7 +30,7 @@ const midtransWebhookHandler = (req, res, next) => __awaiter(void 0, void 0, voi
         if (newStatus) {
             order.status = newStatus;
             yield order.save();
-            server_1.io.emit('order-status-updated', {
+            io.emit('order-status-updated', {
                 orderId: order.orderId,
                 status: newStatus,
                 user: order.user.name,
