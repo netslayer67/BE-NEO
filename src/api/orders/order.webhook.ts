@@ -3,7 +3,6 @@ import { Order } from '../../models/order.model';
 import { ApiError } from '../../errors/apiError';
 import { io } from '../../server';
 import { mapMidtransToInternalStatus } from '../../utils/orderStatusMapper';
-import { logger } from '../../utils/logger'; // Tambahkan util logger jika belum ada
 
 /**
  * @desc Handler untuk menerima webhook dari Midtrans
@@ -38,10 +37,10 @@ export const midtransWebhookHandler = async (req: Request, res: Response, next: 
     return res.status(200).json({ message: 'Webhook received' });
   } catch (error) {
     if (error instanceof Error) {
-      logger.error('Midtrans Webhook Error:', error);
+      console.error('Midtrans Webhook Error:', error);
       next(error);
     } else {
-      logger.error('Unknown error in Midtrans Webhook:', error);
+      console.error('Unknown error in Midtrans Webhook:', error);
       next(new ApiError(500, 'Unexpected error in webhook.'));
     }
   }
