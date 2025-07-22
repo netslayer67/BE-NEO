@@ -21,6 +21,7 @@ const snap = new midtrans_client_1.default.Snap({
     serverKey: process.env.MIDTRANS_SERVER_KEY,
     clientKey: process.env.MIDTRANS_CLIENT_KEY,
 });
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://radiantrage.vercel.app';
 /**
  * Membuat transaksi Midtrans Snap.
  */
@@ -34,6 +35,9 @@ const createTransaction = (orderId, amount, customerDetails) => __awaiter(void 0
         },
         customer_details: customerDetails,
         enabled_payments: enabledPayments,
+        callbacks: {
+            finish: `${FRONTEND_URL}/profile?activeView=orders`,
+        },
     };
     return yield snap.createTransaction(transactionParams);
 });

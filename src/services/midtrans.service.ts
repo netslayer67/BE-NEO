@@ -9,6 +9,8 @@ const snap = new midtransClient.Snap({
   clientKey: process.env.MIDTRANS_CLIENT_KEY as string,
 });
 
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://radiantrage.vercel.app';
+
 /**
  * Membuat transaksi Midtrans Snap.
  */
@@ -26,6 +28,9 @@ export const createTransaction = async (
     },
     customer_details: customerDetails,
     enabled_payments: enabledPayments,
+    callbacks: {
+      finish: `${FRONTEND_URL}/profile?activeView=orders`,
+    },
   };
 
   return await snap.createTransaction(transactionParams);
