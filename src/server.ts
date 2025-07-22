@@ -44,7 +44,7 @@ const corsOptions: CorsOptions = {
 
 
 // --- Inisialisasi Socket.IO dengan Opsi CORS ---
-const io = new Server(httpServer, {
+export const io = new Server(httpServer, {
   cors: corsOptions
 });
 
