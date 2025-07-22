@@ -8,7 +8,10 @@ import { ApiResponse } from '../../utils/apiResponse';
 import { ApiError } from '../../errors/apiError';
 import { IOrderItem, IShippingAddress } from '../../types';
 import { createTransaction } from '../../services/midtrans.service';
-import { io } from '../../server'; // Ensure `io` is exported from server.ts
+import { getSocketIO } from '../../services/socket.service'; // Ensure `io` is exported from server.ts
+
+const io = getSocketIO();
+
 
 /**
  * @desc Membuat pesanan baru & memproses pembayaran dengan Midtrans

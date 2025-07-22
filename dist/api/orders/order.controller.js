@@ -20,7 +20,8 @@ const product_model_1 = require("../../models/product.model");
 const apiResponse_1 = require("../../utils/apiResponse");
 const apiError_1 = require("../../errors/apiError");
 const midtrans_service_1 = require("../../services/midtrans.service");
-const server_1 = require("../../server"); // Ensure `io` is exported from server.ts
+const socket_service_1 = require("../../services/socket.service"); // Ensure `io` is exported from server.ts
+const io = (0, socket_service_1.getSocketIO)();
 /**
  * @desc Membuat pesanan baru & memproses pembayaran dengan Midtrans
  * @route POST /api/v1/orders
@@ -83,13 +84,13 @@ const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
         });
         yield newOrder.save(opts);
         // Emit ke admin bahwa ada pesanan baru
-        server_1.io.emit('new-order', {
+        io.emit('new-order', {
             orderId: newOrder.orderId,
             user: req.user.name,
             total: totalAmount
         });
         // Emit status awal ke admin
-        server_1.io.emit('order-status-updated', {
+        io.emit('order-status-updated', {
             orderId: newOrder.orderId,
             status: newOrder.status,
             user: newOrder.user.name,

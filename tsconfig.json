@@ -1,8 +1,10 @@
 {
   "compilerOptions": {
     "typeRoots": ["./node_modules/@types", "./src/types"],
+    "types": ["node"],
     "target": "es6",
     "module": "commonjs",
+    "moduleResolution": "node",
     "outDir": "dist",
     "rootDir": "src",
     "strict": true,
@@ -10,8 +12,8 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "baseUrl": ".",
+    "baseUrl": "."
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules","dist" ]
+  "exclude": ["node_modules", "dist"]
 }
