@@ -1,4 +1,7 @@
 import midtransClient from 'midtrans-client';
+import dotenv from 'dotenv';
+dotenv.config(); // Tambahkan ini di awal midtrans.service.ts (opsional jika sudah yakin urutan import benar)
+
 
 const snap = new midtransClient.Snap({
   isProduction: process.env.NODE_ENV === 'production',
