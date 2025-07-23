@@ -96,6 +96,7 @@ const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
                 user: newOrder.user.name,
                 totalAmount: newOrder.totalAmount
             });
+            io.emit('dashboard-update');
         }
         // Midtrans hanya jika metode online
         let midtransSnapToken = null;
@@ -169,6 +170,7 @@ const cancelOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
                 user: order.user.name,
                 totalAmount: order.totalAmount,
             });
+            io.emit('dashboard-update');
         }
         if (session)
             yield session.commitTransaction();

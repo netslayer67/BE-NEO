@@ -98,6 +98,7 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
         user: newOrder.user.name,
         totalAmount: newOrder.totalAmount
       });
+      io.emit('dashboard-update');
     }
 
     // Midtrans hanya jika metode online
@@ -176,6 +177,7 @@ export const cancelOrderHandler = async (req: IRequest, res: Response, next: Nex
         user: order.user.name,
         totalAmount: order.totalAmount,
       });
+      io.emit('dashboard-update');
     }
 
     if (session) await session.commitTransaction();
