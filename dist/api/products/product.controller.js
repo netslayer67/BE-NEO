@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteProductHandler = exports.updateProductHandler = exports.getProductBySlugHandler = exports.getAllProductsHandler = exports.createProductHandler = void 0;
+exports.deleteProductHandler = exports.updateProductStockHandler = exports.updateProductHandler = exports.getProductBySlugHandler = exports.getAllProductsHandler = exports.createProductHandler = void 0;
 const product_model_1 = require("../../models/product.model");
 const apiResponse_1 = require("../../utils/apiResponse");
 const apiError_1 = require("../../errors/apiError");
@@ -55,10 +55,25 @@ const productService = __importStar(require("./product.service"));
 // Admin: Create Product (dengan form-data dan upload gambar)
 const createProductHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { name, description, price, category, stock } = req.body;
+        const { name, description, price, category, stock: legacyStock, sizes: sizesRaw } = req.body;
         if (!req.files || req.files.length === 0) {
             throw new apiError_1.ApiError(400, 'Product images are required.');
         }
+        // --- Parse sizes (expect JSON string) ---
+        let sizes = [];
+        if (sizesRaw) {
+            try {
+                sizes = JSON.parse(sizesRaw);
+            }
+            catch (_a) {
+                throw new apiError_1.ApiError(400, 'Invalid sizes format. Must be JSON.');
+            }
+        }
+        if (!sizes.length) {
+            throw new apiError_1.ApiError(400, 'Sizes array is required.');
+        }
+        // --- Hitung total stock dari sizes ---
+        const totalStock = sizes.reduce((sum, s) => sum + s.quantity, 0);
         const files = req.files;
         const uploadedUrls = yield (0, imagekit_service_1.uploadImages)(files);
         const imageObjects = uploadedUrls.map((url, index) => ({
@@ -71,9 +86,10 @@ const createProductHandler = (req, res, next) => __awaiter(void 0, void 0, void 
             description,
             price: parseFloat(price),
             category,
-            stock: parseInt(stock, 10),
+            stock: totalStock, // <- hitung dari sizes
+            sizes,
+            images: imageObjects,
         });
-        newProduct.set('images', imageObjects); // <- penting
         yield newProduct.save();
         return new apiResponse_1.ApiResponse(res, 201, 'Product created successfully', newProduct);
     }
@@ -106,12 +122,23 @@ const getProductBySlugHandler = (req, res, next) => __awaiter(void 0, void 0, vo
     }
 });
 exports.getProductBySlugHandler = getProductBySlugHandler;
-// Admin: Update Product
 const updateProductHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const product = yield product_model_1.Product.findById(req.params.id);
         if (!product) {
             throw new apiError_1.ApiError(404, 'Product not found');
+        }
+        const { sizes: sizesRaw } = req.body;
+        // --- Parse sizes dan hitung ulang stock jika sizes diberikan ---
+        if (sizesRaw) {
+            try {
+                const sizes = JSON.parse(sizesRaw);
+                product.sizes = sizes;
+                product.stock = sizes.reduce((sum, s) => sum + s.quantity, 0);
+            }
+            catch (_a) {
+                throw new apiError_1.ApiError(400, 'Invalid sizes format. Must be JSON.');
+            }
         }
         Object.assign(product, req.body);
         if (req.files && req.files.length > 0) {
@@ -121,7 +148,7 @@ const updateProductHandler = (req, res, next) => __awaiter(void 0, void 0, void 
                 url,
                 alt: `${req.body.name || product.name} - Image ${index + 1}`,
             }));
-            product.set('images', imageObjects); // <- penting
+            product.set('images', imageObjects);
         }
         if (req.body.name) {
             product.slug = (0, slugify_1.default)(req.body.name, { lower: true, strict: true });
@@ -134,6 +161,25 @@ const updateProductHandler = (req, res, next) => __awaiter(void 0, void 0, void 
     }
 });
 exports.updateProductHandler = updateProductHandler;
+const updateProductStockHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { size, quantity } = req.body;
+        const product = yield product_model_1.Product.findById(req.params.productId);
+        if (!product)
+            throw new apiError_1.ApiError(404, 'Product not found');
+        const sizeEntry = product.sizes.find(s => s.size === size);
+        if (!sizeEntry)
+            throw new apiError_1.ApiError(400, 'Size not found');
+        sizeEntry.quantity = quantity;
+        product.stock = product.sizes.reduce((sum, s) => sum + s.quantity, 0);
+        yield product.save();
+        return new apiResponse_1.ApiResponse(res, 200, 'Product stock updated successfully', product);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+exports.updateProductStockHandler = updateProductStockHandler;
 // Admin: Delete Product
 const deleteProductHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {

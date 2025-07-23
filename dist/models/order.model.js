@@ -14,6 +14,11 @@ const orderSchema = new mongoose_1.Schema({
             name: { type: String, required: true },
             quantity: { type: Number, required: true },
             price: { type: Number, required: true },
+            size: {
+                type: String,
+                enum: ['S', 'M', 'L', 'XL'],
+                required: true,
+            }, // <-- pindahkan size ke sini
         }],
     totalAmount: { type: Number, required: true },
     adminFee: { type: Number, default: 0 },
@@ -33,7 +38,7 @@ const orderSchema = new mongoose_1.Schema({
     status: {
         type: String,
         enum: ['Pending Payment', 'Diproses', 'Dikirim', 'Telah Sampai', 'Cancelled'],
-        default: 'Pending Payment', // <-- Status default saat order dibuat
+        default: 'Pending Payment',
     },
     paymentProof: { type: String },
     transactionId: { type: String },

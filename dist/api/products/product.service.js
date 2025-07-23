@@ -10,7 +10,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAllProducts = void 0;
-// src/api/products/product.service.ts
 const product_model_1 = require("../../models/product.model");
 const getAllProducts = (query) => __awaiter(void 0, void 0, void 0, function* () {
     const page = parseInt(query.page || '1', 10);
@@ -26,8 +25,12 @@ const getAllProducts = (query) => __awaiter(void 0, void 0, void 0, function* ()
         filter.name = { $regex: query.search, $options: 'i' };
     }
     const [products, total] = yield Promise.all([
-        product_model_1.Product.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }),
-        product_model_1.Product.countDocuments(filter)
+        product_model_1.Product.find(filter)
+            .skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 })
+            .select('name slug description price category images stock sizes createdAt'), // ✅ sizes included
+        product_model_1.Product.countDocuments(filter),
     ]);
     const pagination = {
         total,

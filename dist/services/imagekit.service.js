@@ -13,6 +13,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.uploadImages = void 0;
+// src/services/imagekit.service.ts
+const dotenv_1 = __importDefault(require("dotenv"));
+dotenv_1.default.config(); // tambahkan baris ini di paling atas
 const imagekit_1 = __importDefault(require("imagekit"));
 const sharp_1 = __importDefault(require("sharp"));
 const apiError_1 = require("../errors/apiError");
