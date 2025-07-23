@@ -14,7 +14,7 @@ const httpServer = http.createServer(app);
 // 2. Inisialisasi Socket.IO
 const io = new Server(httpServer, {
   cors: {
-    origin: ['http://localhost:5173', 'https://radiantrage.vercel.app'],
+    origin: ['http://localhost:5173', 'https://neodervish.vercel.app'],
     methods: ["GET", "POST"],
     credentials: true,
   },

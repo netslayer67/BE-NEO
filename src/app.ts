@@ -14,7 +14,7 @@ const app = express();
 // --- CORS Configuration ---
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://radiantrage.vercel.app'
+  'https://neodervish.vercel.app'
 ];
 
 const corsOptions: CorsOptions = {
