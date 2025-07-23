@@ -29,7 +29,7 @@ export const createTransaction = async (
     customer_details: customerDetails,
     enabled_payments: enabledPayments,
     callbacks: {
-      finish: `${FRONTEND_URL}/profile?activeView=orders`,
+      finish: `${FRONTEND_URL}/profile`,
     },
   };
 

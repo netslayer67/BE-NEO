@@ -36,7 +36,7 @@ const createTransaction = (orderId, amount, customerDetails) => __awaiter(void 0
         customer_details: customerDetails,
         enabled_payments: enabledPayments,
         callbacks: {
-            finish: `${FRONTEND_URL}/profile?activeView=orders`,
+            finish: `${FRONTEND_URL}/profile`,
         },
     };
     return yield snap.createTransaction(transactionParams);

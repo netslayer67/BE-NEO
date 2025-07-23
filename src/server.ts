@@ -15,9 +15,12 @@ const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
   cors: {
     origin: ['http://localhost:5173', 'https://radiantrage.vercel.app'],
+    methods: ["GET", "POST"],
     credentials: true,
   },
 });
+
+
 
 // 3. Simpan instance Socket.IO agar bisa digunakan modul lain
 initializeSocketIO(io);

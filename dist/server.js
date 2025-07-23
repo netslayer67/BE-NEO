@@ -25,6 +25,7 @@ const httpServer = http_1.default.createServer(app_1.default);
 const io = new socket_io_1.Server(httpServer, {
     cors: {
         origin: ['http://localhost:5173', 'https://radiantrage.vercel.app'],
+        methods: ["GET", "POST"],
         credentials: true,
     },
 });

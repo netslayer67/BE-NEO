@@ -140,6 +140,7 @@ const cancelOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
         if (!req.user)
             throw new apiError_1.ApiError(401, 'User not authenticated.');
         const opts = { session };
+        // Cari pesanan milik user yang sedang login
         const order = yield order_model_1.Order.findOne({
             orderId: req.params.orderId,
             'user._id': req.user._id
@@ -150,13 +151,25 @@ const cancelOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
         if (!cancellableStatuses.includes(order.status)) {
             throw new apiError_1.ApiError(400, `Cannot cancel order with status '${order.status}'.`);
         }
+        // Kembalikan stok produk
         for (const item of order.items) {
             yield product_model_1.Product.findByIdAndUpdate(item.product, {
                 $inc: { stock: item.quantity }
             }, opts);
         }
+        // Ubah status order
         order.status = 'Cancelled';
-        yield order.save(opts);
+        yield order.save(opts); // Simpan ke database dulu sebelum emit
+        // Emit event real-time ke admin bahwa status order berubah
+        const io = (0, socket_service_1.getSocketIO)();
+        if (io) {
+            io.emit('order-status-updated', {
+                orderId: order.orderId,
+                status: order.status,
+                user: order.user.name,
+                totalAmount: order.totalAmount,
+            });
+        }
         if (session)
             yield session.commitTransaction();
         return new apiResponse_1.ApiResponse(res, 200, 'Order has been successfully cancelled.', order);

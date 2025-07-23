@@ -143,6 +143,7 @@ export const cancelOrderHandler = async (req: IRequest, res: Response, next: Nex
     if (!req.user) throw new ApiError(401, 'User not authenticated.');
     const opts = { session };
 
+    // Cari pesanan milik user yang sedang login
     const order = await Order.findOne({
       orderId: req.params.orderId,
       'user._id': req.user._id
@@ -155,14 +156,27 @@ export const cancelOrderHandler = async (req: IRequest, res: Response, next: Nex
       throw new ApiError(400, `Cannot cancel order with status '${order.status}'.`);
     }
 
+    // Kembalikan stok produk
     for (const item of order.items) {
       await Product.findByIdAndUpdate(item.product, {
         $inc: { stock: item.quantity }
       }, opts);
     }
 
+    // Ubah status order
     order.status = 'Cancelled';
-    await order.save(opts);
+    await order.save(opts); // Simpan ke database dulu sebelum emit
+
+    // Emit event real-time ke admin bahwa status order berubah
+    const io = getSocketIO();
+    if (io) {
+      io.emit('order-status-updated', {
+        orderId: order.orderId,
+        status: order.status,
+        user: order.user.name,
+        totalAmount: order.totalAmount,
+      });
+    }
 
     if (session) await session.commitTransaction();
 
@@ -174,6 +188,7 @@ export const cancelOrderHandler = async (req: IRequest, res: Response, next: Nex
     if (session) session.endSession();
   }
 };
+
 
 
 /**
