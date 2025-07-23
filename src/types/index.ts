@@ -23,7 +23,9 @@ export interface IOrderItem {
   name: string;
   quantity: number;
   price: number;
+  size: 'S' | 'M' | 'L' | 'XL'; // <- tambahkan di sini
 }
+
 
 
 // =================================================================
@@ -52,6 +54,14 @@ export interface IProductImage {
 }
 
 /**
+ * @description Detail stock untuk setiap ukuran baju.
+ */
+export interface ISizeStock {
+  size: 'S' | 'M' | 'L' | 'XL';
+  quantity: number;
+}
+
+/**
  * @description Merepresentasikan dokumen Produk (Product) di database.
  */
 export interface IProduct extends Document {
@@ -60,34 +70,34 @@ export interface IProduct extends Document {
   description: string;
   price: number;
   category: string;
-  images: IProductImage[]; // <- updated
-  stock: number;
+  images: IProductImage[];
+  stock: number; // Total dari semua ukuran
+  sizes: ISizeStock[]; // 👈 Tambahkan ini
   createdAt: Date;
   updatedAt: Date;
 }
 
-/**
- * @description Merepresentasikan dokumen Pesanan (Order) di database.
- */
+
 export interface IOrder extends Document {
-  orderId: string; // ID unik yang dibuat aplikasi, bukan _id dari MongoDB
+  orderId: string;
   user: {
-      _id: Schema.Types.ObjectId;
-      name: string;
-      email: string;
+    _id: Schema.Types.ObjectId;
+    name: string;
+    email: string;
   };
-  items: IOrderItem[];
+  items: IOrderItem[]; // <- sudah mencakup size
   totalAmount: number;
-  shippingAddress: IShippingAddress; // Menggunakan interface sub-dokumen
+  shippingAddress: IShippingAddress;
   status: 'Pending Payment' | 'Diproses' | 'Dikirim' | 'Telah Sampai' | 'Cancelled';
-  paymentMethod?: 'online' | 'offline',
+  paymentMethod?: 'online' | 'offline';
   paymentProof?: string;
   transactionId?: string;
-  adminFee:  number;
-discount: number;
-  createdAt: Date; // Timestamps
-  updatedAt: Date; // Timestamps
+  adminFee: number;
+  discount: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
+
 
 /**
  * @description Merepresentasikan dokumen Ulasan (Review) di database.

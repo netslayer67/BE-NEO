@@ -1,3 +1,7 @@
+
+// src/services/imagekit.service.ts
+import dotenv from 'dotenv';
+dotenv.config(); // tambahkan baris ini di paling atas
 import ImageKit from 'imagekit';
 import sharp from 'sharp';
 import { ApiError } from '../errors/apiError';

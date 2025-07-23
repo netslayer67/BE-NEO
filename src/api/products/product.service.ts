@@ -1,5 +1,4 @@
-// src/api/products/product.service.ts
-import {Product} from '../../models/product.model';
+import { Product } from '../../models/product.model';
 
 interface QueryParams {
   page?: string;
@@ -26,8 +25,12 @@ export const getAllProducts = async (query: QueryParams) => {
   }
 
   const [products, total] = await Promise.all([
-    Product.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }),
-    Product.countDocuments(filter)
+    Product.find(filter)
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 })
+      .select('name slug description price category images stock sizes createdAt'), // ✅ sizes included
+    Product.countDocuments(filter),
   ]);
 
   const pagination = {

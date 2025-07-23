@@ -27,7 +27,7 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
     };
 
     if (!req.user) throw new ApiError(401, 'User not authenticated.');
-    if (!items || items.length === 0) throw new ApiError(400, 'Order items cannot be empty.');
+    if (!items?.length) throw new ApiError(400, 'Order items cannot be empty.');
     if (!['online', 'offline'].includes(paymentMethod)) {
       throw new ApiError(400, 'Invalid payment method.');
     }
@@ -39,11 +39,16 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
     for (const item of items) {
       const product = await Product.findById(item.product).setOptions(opts);
       if (!product) throw new ApiError(404, `Product with ID ${item.product} not found.`);
-      if (product.stock < item.quantity) {
-        throw new ApiError(400, `Insufficient stock for '${product.name}'.`);
+      if (!item.size) throw new ApiError(400, `Size is required for '${product.name}'.`);
+
+      const sizeEntry = product.sizes.find(s => s.size === item.size);
+      if (!sizeEntry || sizeEntry.quantity < item.quantity) {
+        throw new ApiError(400, `Insufficient stock for '${product.name}' size ${item.size}.`);
       }
 
+      // Update stock
       product.stock -= item.quantity;
+      sizeEntry.quantity -= item.quantity;
       await product.save(opts);
 
       itemsPrice += product.price * item.quantity;
@@ -52,23 +57,23 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
         product,
         name: product.name,
         quantity: item.quantity,
-        price: product.price
+        price: product.price,
+        size: item.size,
       });
     }
 
     const orderId = `NEO-${Date.now()}-${uuidv4().substring(0, 4).toUpperCase()}`;
     const shippingPrice = 15000;
     const adminFee = paymentMethod === 'offline' ? 2500 : 0;
-    const onlineDiscount = paymentMethod === 'online' ? 3000 : 0;
-
-    const totalAmount = itemsPrice + shippingPrice + adminFee - onlineDiscount;
+    const discount = paymentMethod === 'online' ? 3000 : 0;
+    const totalAmount = itemsPrice + shippingPrice + adminFee - discount;
 
     const newOrder = new Order({
       orderId,
       user: {
         _id: req.user._id,
         name: req.user.name,
-        email: req.user.email
+        email: req.user.email,
       },
       items: processedItems,
       shippingAddress,
@@ -76,41 +81,37 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
       itemsPrice,
       shippingPrice,
       adminFee,
-      discount: onlineDiscount,
+      discount,
       totalAmount,
-      status: paymentMethod === 'online' ? 'Pending Payment' : 'Diproses'
+      status: paymentMethod === 'online' ? 'Pending Payment' : 'Diproses',
     });
 
     await newOrder.save(opts);
 
-    // Emit ke admin bahwa ada pesanan baru
     const io = getSocketIO();
     if (io) {
       io.emit('new-order', {
         orderId: newOrder.orderId,
         user: req.user.name,
-        total: totalAmount
+        total: totalAmount,
       });
-
       io.emit('order-status-updated', {
         orderId: newOrder.orderId,
         status: newOrder.status,
         user: newOrder.user.name,
-        totalAmount: newOrder.totalAmount
+        totalAmount: newOrder.totalAmount,
       });
       io.emit('dashboard-update');
     }
 
-    // Midtrans hanya jika metode online
     let midtransSnapToken: string | null = null;
     let redirectUrl: string | null = null;
 
     if (paymentMethod === 'online') {
       const midtransRes = await createTransaction(orderId, totalAmount, {
         first_name: req.user.name,
-        email: req.user.email
+        email: req.user.email,
       });
-
       midtransSnapToken = midtransRes.token;
       redirectUrl = midtransRes.redirect_url;
     }
@@ -120,7 +121,7 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
     return new ApiResponse(res, 201, 'Order created successfully.', {
       order: newOrder,
       midtransSnapToken,
-      redirectUrl
+      redirectUrl,
     });
   } catch (error) {
     if (session) await session.abortTransaction();
@@ -129,7 +130,43 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
     if (session) session.endSession();
   }
 };
+/**
+ * @desc Mendapatkan semua pesanan milik user yang sedang login
+ * @route GET /api/v1/orders/my
+ */
+export const getMyOrdersHandler = async (req: IRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new ApiError(401, 'Unauthorized');
 
+    const orders = await Order.find({ 'user._id': req.user._id })
+      .sort({ createdAt: -1 });
+
+    return new ApiResponse(res, 200, 'Successfully fetched your orders.', orders);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc Mendapatkan detail satu pesanan milik user
+ * @route GET /api/v1/orders/:orderId
+ */
+export const getOrderByIdHandler = async (req: IRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new ApiError(401, 'Unauthorized');
+
+    const order = await Order.findOne({
+      orderId: req.params.orderId,
+      'user._id': req.user._id
+    });
+
+    if (!order) throw new ApiError(404, 'Order not found.');
+
+    return new ApiResponse(res, 200, 'Successfully fetched order detail.', order);
+  } catch (error) {
+    next(error);
+  }
+};
 
 /**
  * @desc Membatalkan pesanan dan mengembalikan stok
@@ -144,7 +181,6 @@ export const cancelOrderHandler = async (req: IRequest, res: Response, next: Nex
     if (!req.user) throw new ApiError(401, 'User not authenticated.');
     const opts = { session };
 
-    // Cari pesanan milik user yang sedang login
     const order = await Order.findOne({
       orderId: req.params.orderId,
       'user._id': req.user._id
@@ -152,23 +188,36 @@ export const cancelOrderHandler = async (req: IRequest, res: Response, next: Nex
 
     if (!order) throw new ApiError(404, 'Order not found.');
 
-    const cancellableStatuses = ['Pending Payment', 'Diproses'];
+    const cancellableStatuses: string[] = ['Pending Payment', 'Diproses'];
     if (!cancellableStatuses.includes(order.status)) {
       throw new ApiError(400, `Cannot cancel order with status '${order.status}'.`);
     }
 
-    // Kembalikan stok produk
+    // Kembalikan stok (total dan per-size)
     for (const item of order.items) {
-      await Product.findByIdAndUpdate(item.product, {
-        $inc: { stock: item.quantity }
-      }, opts);
+      const product = await Product.findById(item.product).setOptions(opts);
+      if (product) {
+        // Update size-specific stock
+        if (item.size) {
+          const sizeEntry = product.sizes.find(s => s.size === item.size);
+          if (sizeEntry) {
+            sizeEntry.quantity += item.quantity;
+          } else {
+            // Jika size tidak ditemukan, buat baru (opsional tergantung bisnis rule)
+            product.sizes.push({ size: item.size, quantity: item.quantity });
+          }
+        }
+
+        // Update total stock
+        product.stock += item.quantity;
+        await product.save(opts);
+      }
     }
 
-    // Ubah status order
     order.status = 'Cancelled';
-    await order.save(opts); // Simpan ke database dulu sebelum emit
+    await order.save(opts);
 
-    // Emit event real-time ke admin bahwa status order berubah
+    // Emit real-time update ke admin dan dashboard
     const io = getSocketIO();
     if (io) {
       io.emit('order-status-updated', {
@@ -188,44 +237,5 @@ export const cancelOrderHandler = async (req: IRequest, res: Response, next: Nex
     next(error);
   } finally {
     if (session) session.endSession();
-  }
-};
-
-
-
-/**
- * @desc Mendapatkan semua pesanan milik user yang login
- * @route GET /api/v1/orders/my
- */
-export const getMyOrdersHandler = async (req: IRequest, res: Response, next: NextFunction) => {
-  try {
-    if (!req.user) throw new ApiError(401, 'User not authenticated.');
-
-    const orders = await Order.find({ 'user._id': req.user._id }).sort({ createdAt: -1 });
-    return new ApiResponse(res, 200, 'User orders fetched successfully', orders);
-  } catch (error) {
-    next(error);
-  }
-};
-
-
-/**
- * @desc Mendapatkan detail pesanan berdasarkan ID
- * @route GET /api/v1/orders/:_id
- */
-export const getOrderByIdHandler = async (req: IRequest, res: Response, next: NextFunction) => {
-  try {
-    if (!req.user) throw new ApiError(401, 'User not authenticated.');
-
-    const { _id } = req.params;
-    const order = await Order.findOne({ _id, 'user._id': req.user._id });
-
-    if (!order) {
-      throw new ApiError(404, 'Order not found or you do not have permission to view it.');
-    }
-
-    return new ApiResponse(res, 200, 'Order details fetched successfully', order);
-  } catch (error) {
-    next(error);
   }
 };

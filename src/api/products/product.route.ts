@@ -7,7 +7,9 @@ import {
   getProductBySlugHandler,
   updateProductHandler,
   deleteProductHandler,
+  updateProductStockHandler, // ✅ Tambahkan ini
 } from './product.controller';
+
 
 const router = Router();
 
@@ -22,5 +24,8 @@ router.route('/:id')
   .delete(protect, admin, deleteProductHandler); // Gunakan ID untuk delete
 
 router.get('/slug/:slug', getProductBySlugHandler); // Rute khusus untuk slug
+
+// ✅ Rute khusus untuk update stok berdasarkan size
+router.patch('/:productId/stock', protect, admin, updateProductStockHandler);
 
 export default router;
