@@ -21,6 +21,7 @@ const apiResponse_1 = require("../../utils/apiResponse");
 const apiError_1 = require("../../errors/apiError");
 const midtrans_service_1 = require("../../services/midtrans.service");
 const socket_service_1 = require("../../services/socket.service");
+const order_1 = require("../../utils/order");
 /**
  * @desc Membuat pesanan baru & memproses pembayaran dengan Midtrans
  * @route POST /api/v1/orders
@@ -66,10 +67,8 @@ const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
             });
         }
         const orderId = `NEO-${Date.now()}-${(0, uuid_1.v4)().substring(0, 4).toUpperCase()}`;
-        const shippingPrice = 15000;
-        const adminFee = paymentMethod === 'offline' ? 2500 : 0;
-        const discount = paymentMethod === 'online' ? 3000 : 0;
-        const totalAmount = itemsPrice + shippingPrice + adminFee - discount;
+        // ✅ Hitung total pakai helper
+        const { totalAmount, shippingPrice, adminFee, discount } = (0, order_1.calculateOrderTotal)(itemsPrice, paymentMethod);
         const newOrder = new order_model_1.Order({
             orderId,
             user: {
@@ -88,6 +87,7 @@ const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
             status: paymentMethod === 'online' ? 'Pending Payment' : 'Diproses',
         });
         yield newOrder.save(opts);
+        // 🔔 Emit socket event ke admin/dashboard
         const io = (0, socket_service_1.getSocketIO)();
         if (io) {
             io.emit('new-order', {
@@ -133,15 +133,14 @@ const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
 });
 exports.createOrderHandler = createOrderHandler;
 /**
- * @desc Mendapatkan semua pesanan milik user yang sedang login
+ * @desc Mendapatkan semua pesanan milik user
  * @route GET /api/v1/orders/my
  */
 const getMyOrdersHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         if (!req.user)
             throw new apiError_1.ApiError(401, 'Unauthorized');
-        const orders = yield order_model_1.Order.find({ 'user._id': req.user._id })
-            .sort({ createdAt: -1 });
+        const orders = yield order_model_1.Order.find({ 'user._id': req.user._id }).sort({ createdAt: -1 });
         return new apiResponse_1.ApiResponse(res, 200, 'Successfully fetched your orders.', orders);
     }
     catch (error) {
@@ -150,7 +149,7 @@ const getMyOrdersHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
 });
 exports.getMyOrdersHandler = getMyOrdersHandler;
 /**
- * @desc Mendapatkan detail satu pesanan milik user
+ * @desc Mendapatkan detail satu pesanan
  * @route GET /api/v1/orders/:orderId
  */
 const getOrderByIdHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
@@ -159,7 +158,7 @@ const getOrderByIdHandler = (req, res, next) => __awaiter(void 0, void 0, void 0
             throw new apiError_1.ApiError(401, 'Unauthorized');
         const order = yield order_model_1.Order.findOne({
             orderId: req.params.orderId,
-            'user._id': req.user._id
+            'user._id': req.user._id,
         });
         if (!order)
             throw new apiError_1.ApiError(404, 'Order not found.');
@@ -171,7 +170,7 @@ const getOrderByIdHandler = (req, res, next) => __awaiter(void 0, void 0, void 0
 });
 exports.getOrderByIdHandler = getOrderByIdHandler;
 /**
- * @desc Membatalkan pesanan dan mengembalikan stok
+ * @desc Membatalkan pesanan & kembalikan stok
  * @route PATCH /api/v1/orders/:orderId/cancel
  */
 const cancelOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
@@ -185,7 +184,7 @@ const cancelOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
         const opts = { session };
         const order = yield order_model_1.Order.findOne({
             orderId: req.params.orderId,
-            'user._id': req.user._id
+            'user._id': req.user._id,
         }).setOptions(opts);
         if (!order)
             throw new apiError_1.ApiError(404, 'Order not found.');
@@ -193,29 +192,26 @@ const cancelOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
         if (!cancellableStatuses.includes(order.status)) {
             throw new apiError_1.ApiError(400, `Cannot cancel order with status '${order.status}'.`);
         }
-        // Kembalikan stok (total dan per-size)
+        // Restore stock
         for (const item of order.items) {
             const product = yield product_model_1.Product.findById(item.product).setOptions(opts);
             if (product) {
-                // Update size-specific stock
                 if (item.size) {
                     const sizeEntry = product.sizes.find(s => s.size === item.size);
                     if (sizeEntry) {
                         sizeEntry.quantity += item.quantity;
                     }
                     else {
-                        // Jika size tidak ditemukan, buat baru (opsional tergantung bisnis rule)
                         product.sizes.push({ size: item.size, quantity: item.quantity });
                     }
                 }
-                // Update total stock
                 product.stock += item.quantity;
                 yield product.save(opts);
             }
         }
         order.status = 'Cancelled';
         yield order.save(opts);
-        // Emit real-time update ke admin dan dashboard
+        // 🔔 Emit socket event
         const io = (0, socket_service_1.getSocketIO)();
         if (io) {
             io.emit('order-status-updated', {

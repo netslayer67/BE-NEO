@@ -9,12 +9,17 @@ import { ApiError } from '../../errors/apiError';
 import { IOrderItem, IShippingAddress } from '../../types';
 import { createTransaction } from '../../services/midtrans.service';
 import { getSocketIO } from '../../services/socket.service';
+import { calculateOrderTotal } from '../../utils/order';
 
 /**
  * @desc Membuat pesanan baru & memproses pembayaran dengan Midtrans
  * @route POST /api/v1/orders
  */
-export const createOrderHandler = async (req: IRequest, res: Response, next: NextFunction) => {
+export const createOrderHandler = async (
+  req: IRequest,
+  res: Response,
+  next: NextFunction
+) => {
   const isProduction = process.env.NODE_ENV === 'production';
   const session = isProduction ? await mongoose.startSession() : null;
   if (session) session.startTransaction();
@@ -63,10 +68,10 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
     }
 
     const orderId = `NEO-${Date.now()}-${uuidv4().substring(0, 4).toUpperCase()}`;
-    const shippingPrice = 15000;
-    const adminFee = paymentMethod === 'offline' ? 2500 : 0;
-    const discount = paymentMethod === 'online' ? 3000 : 0;
-    const totalAmount = itemsPrice + shippingPrice + adminFee - discount;
+
+    // ✅ Hitung total pakai helper
+    const { totalAmount, shippingPrice, adminFee, discount } =
+      calculateOrderTotal(itemsPrice, paymentMethod);
 
     const newOrder = new Order({
       orderId,
@@ -88,6 +93,7 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
 
     await newOrder.save(opts);
 
+    // 🔔 Emit socket event ke admin/dashboard
     const io = getSocketIO();
     if (io) {
       io.emit('new-order', {
@@ -130,17 +136,19 @@ export const createOrderHandler = async (req: IRequest, res: Response, next: Nex
     if (session) session.endSession();
   }
 };
+
 /**
- * @desc Mendapatkan semua pesanan milik user yang sedang login
+ * @desc Mendapatkan semua pesanan milik user
  * @route GET /api/v1/orders/my
  */
-export const getMyOrdersHandler = async (req: IRequest, res: Response, next: NextFunction) => {
+export const getMyOrdersHandler = async (
+  req: IRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     if (!req.user) throw new ApiError(401, 'Unauthorized');
-
-    const orders = await Order.find({ 'user._id': req.user._id })
-      .sort({ createdAt: -1 });
-
+    const orders = await Order.find({ 'user._id': req.user._id }).sort({ createdAt: -1 });
     return new ApiResponse(res, 200, 'Successfully fetched your orders.', orders);
   } catch (error) {
     next(error);
@@ -148,20 +156,21 @@ export const getMyOrdersHandler = async (req: IRequest, res: Response, next: Nex
 };
 
 /**
- * @desc Mendapatkan detail satu pesanan milik user
+ * @desc Mendapatkan detail satu pesanan
  * @route GET /api/v1/orders/:orderId
  */
-export const getOrderByIdHandler = async (req: IRequest, res: Response, next: NextFunction) => {
+export const getOrderByIdHandler = async (
+  req: IRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     if (!req.user) throw new ApiError(401, 'Unauthorized');
-
     const order = await Order.findOne({
       orderId: req.params.orderId,
-      'user._id': req.user._id
+      'user._id': req.user._id,
     });
-
     if (!order) throw new ApiError(404, 'Order not found.');
-
     return new ApiResponse(res, 200, 'Successfully fetched order detail.', order);
   } catch (error) {
     next(error);
@@ -169,10 +178,14 @@ export const getOrderByIdHandler = async (req: IRequest, res: Response, next: Ne
 };
 
 /**
- * @desc Membatalkan pesanan dan mengembalikan stok
+ * @desc Membatalkan pesanan & kembalikan stok
  * @route PATCH /api/v1/orders/:orderId/cancel
  */
-export const cancelOrderHandler = async (req: IRequest, res: Response, next: NextFunction) => {
+export const cancelOrderHandler = async (
+  req: IRequest,
+  res: Response,
+  next: NextFunction
+) => {
   const isProduction = process.env.NODE_ENV === 'production';
   const session = isProduction ? await mongoose.startSession() : null;
   if (session) session.startTransaction();
@@ -183,7 +196,7 @@ export const cancelOrderHandler = async (req: IRequest, res: Response, next: Nex
 
     const order = await Order.findOne({
       orderId: req.params.orderId,
-      'user._id': req.user._id
+      'user._id': req.user._id,
     }).setOptions(opts);
 
     if (!order) throw new ApiError(404, 'Order not found.');
@@ -193,22 +206,18 @@ export const cancelOrderHandler = async (req: IRequest, res: Response, next: Nex
       throw new ApiError(400, `Cannot cancel order with status '${order.status}'.`);
     }
 
-    // Kembalikan stok (total dan per-size)
+    // Restore stock
     for (const item of order.items) {
       const product = await Product.findById(item.product).setOptions(opts);
       if (product) {
-        // Update size-specific stock
         if (item.size) {
           const sizeEntry = product.sizes.find(s => s.size === item.size);
           if (sizeEntry) {
             sizeEntry.quantity += item.quantity;
           } else {
-            // Jika size tidak ditemukan, buat baru (opsional tergantung bisnis rule)
             product.sizes.push({ size: item.size, quantity: item.quantity });
           }
         }
-
-        // Update total stock
         product.stock += item.quantity;
         await product.save(opts);
       }
@@ -217,7 +226,7 @@ export const cancelOrderHandler = async (req: IRequest, res: Response, next: Nex
     order.status = 'Cancelled';
     await order.save(opts);
 
-    // Emit real-time update ke admin dan dashboard
+    // 🔔 Emit socket event
     const io = getSocketIO();
     if (io) {
       io.emit('order-status-updated', {
@@ -230,7 +239,6 @@ export const cancelOrderHandler = async (req: IRequest, res: Response, next: Nex
     }
 
     if (session) await session.commitTransaction();
-
     return new ApiResponse(res, 200, 'Order has been successfully cancelled.', order);
   } catch (error) {
     if (session) await session.abortTransaction();
