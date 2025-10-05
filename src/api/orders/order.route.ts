@@ -16,8 +16,10 @@ router.use(protect);
 
 // Rute untuk endpoint utama '/orders'
 router.route('/')
-    .post(createOrderHandler)    // POST /api/v1/orders - Membuat pesanan baru
-    .get(getMyOrdersHandler);     // GET  /api/v1/orders - Mendapatkan semua riwayat pesanan pengguna
+    .post(createOrderHandler);    // POST /api/v1/orders - Membuat pesanan baru
+
+// Rute untuk mendapatkan semua pesanan milik user
+router.get('/my', getMyOrdersHandler);     // GET  /api/v1/orders/my - Mendapatkan semua riwayat pesanan pengguna
 
 // Rute untuk membatalkan pesanan (menggunakan PUT karena ini adalah update status)
 router.put('/:orderId/cancel', cancelOrderHandler); // <-- 2. Tambahkan rute untuk "cancel"

@@ -210,10 +210,12 @@ const cancelOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
         if (!req.user)
             throw new apiError_1.ApiError(401, 'User not authenticated.');
         const opts = { session };
+        console.log('Cancel order request:', { orderId: req.params.orderId, userId: req.user._id });
         const order = yield order_model_1.Order.findOne({
             orderId: req.params.orderId,
             'user._id': req.user._id,
         }).setOptions(opts);
+        console.log('Found order to cancel:', order ? { orderId: order.orderId, status: order.status } : 'NOT FOUND');
         if (!order)
             throw new apiError_1.ApiError(404, 'Order not found.');
         const cancellableStatuses = ['Pending Payment', 'Diproses'];

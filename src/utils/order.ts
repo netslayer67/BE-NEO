@@ -7,6 +7,7 @@ export interface OrderCalculationInput {
   shippingAddress: {
     city: string;
     postalCode?: string;
+    [key: string]: any; // Allow additional fields
   };
   weight?: number;
 }

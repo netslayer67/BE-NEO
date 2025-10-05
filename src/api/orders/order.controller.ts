@@ -226,10 +226,14 @@ export const cancelOrderHandler = async (
     if (!req.user) throw new ApiError(401, 'User not authenticated.');
     const opts = { session };
 
+    console.log('Cancel order request:', { orderId: req.params.orderId, userId: req.user._id });
+
     const order = await Order.findOne({
       orderId: req.params.orderId,
       'user._id': req.user._id,
     }).setOptions(opts);
+
+    console.log('Found order to cancel:', order ? { orderId: order.orderId, status: order.status } : 'NOT FOUND');
 
     if (!order) throw new ApiError(404, 'Order not found.');
 
