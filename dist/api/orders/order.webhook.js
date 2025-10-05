@@ -34,18 +34,36 @@ const emitOrderStatusUpdate = (orderId, newStatus, userName, totalAmount) => {
  */
 const midtransWebhookHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { order_id, transaction_status, fraud_status } = req.body;
+        const { order_id, transaction_id, transaction_status, fraud_status, payment_type, gross_amount } = req.body;
+        console.log('[Midtrans Webhook]', {
+            order_id,
+            transaction_id,
+            transaction_status,
+            fraud_status,
+            payment_type,
+            gross_amount
+        });
         if (!order_id || !transaction_status) {
             throw new apiError_1.ApiError(400, 'Invalid Midtrans webhook payload.');
         }
         const order = yield order_model_1.Order.findOne({ orderId: order_id });
-        if (!order)
+        if (!order) {
+            console.error(`Order not found for order_id: ${order_id}`);
             throw new apiError_1.ApiError(404, 'Order not found');
+        }
         const newStatus = (0, orderStatusMapper_1.mapMidtransToInternalStatus)(transaction_status, fraud_status);
         if (newStatus && newStatus !== order.status) {
             order.status = newStatus;
+            // Store transaction_id if not already set
+            if (transaction_id && !order.transactionId) {
+                order.transactionId = transaction_id;
+            }
             yield order.save();
             emitOrderStatusUpdate(order.orderId, newStatus, order.user.name, order.totalAmount);
+            console.log(`Order ${order.orderId} status updated to: ${newStatus}`);
+        }
+        else {
+            console.log(`Order ${order.orderId} status unchanged: ${order.status}`);
         }
         return res.status(200).json({ message: 'Webhook processed successfully.' });
     }

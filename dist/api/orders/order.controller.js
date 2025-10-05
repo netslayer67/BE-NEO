@@ -112,12 +112,22 @@ const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
         let midtransSnapToken = null;
         let redirectUrl = null;
         if (paymentMethod === 'va') {
-            const midtransRes = yield (0, midtrans_service_1.createTransaction)(orderId, calculationResult.totalAmount, {
-                first_name: req.user.name,
-                email: req.user.email,
-            });
-            midtransSnapToken = midtransRes.token;
-            redirectUrl = midtransRes.redirect_url;
+            try {
+                console.log('Creating Midtrans transaction for order:', orderId);
+                const midtransRes = yield (0, midtrans_service_1.createTransaction)(orderId, calculationResult.totalAmount, {
+                    first_name: req.user.name.split(' ')[0],
+                    last_name: req.user.name.split(' ').slice(1).join(' ') || '',
+                    email: req.user.email,
+                    phone: shippingAddress.phone || '',
+                }, Object.assign(Object.assign({}, shippingAddress), { phone: shippingAddress.phone || '' }));
+                midtransSnapToken = midtransRes.token;
+                redirectUrl = midtransRes.redirect_url;
+                console.log('Midtrans transaction created successfully:', { orderId, hasToken: !!midtransSnapToken });
+            }
+            catch (midtransError) {
+                console.error('Midtrans transaction creation failed:', midtransError);
+                throw new apiError_1.ApiError(500, 'Failed to create payment transaction. Please try again.');
+            }
         }
         if (session)
             yield session.commitTransaction();

@@ -10,6 +10,9 @@ import { midtransWebhookHandler } from './order.webhook';
 
 const router = Router();
 
+// ✅ Public Midtrans webhook endpoint (harus sebelum middleware protect)
+router.post('/webhook', midtransWebhookHandler);
+
 // Middleware 'protect' akan diterapkan ke semua rute di bawah ini
 // untuk memastikan hanya pengguna yang sudah login yang bisa mengakses.
 router.use(protect);
@@ -27,8 +30,5 @@ router.put('/:orderId/cancel', cancelOrderHandler); // <-- 2. Tambahkan rute unt
 // Rute untuk mendapatkan detail satu pesanan spesifik
 // Diletakkan terakhir agar tidak konflik dengan rute '/cancel'
 router.get('/:id', getOrderByIdHandler);       // GET  /api/v1/orders/:orderId
-
-// ✅ Public Midtrans webhook endpoint
-router.post('/webhook', midtransWebhookHandler);
 
 export default router;

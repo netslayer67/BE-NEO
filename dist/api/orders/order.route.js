@@ -5,6 +5,8 @@ const auth_middleware_1 = require("../../middlewares/auth.middleware");
 const order_controller_1 = require("./order.controller");
 const order_webhook_1 = require("./order.webhook");
 const router = (0, express_1.Router)();
+// ✅ Public Midtrans webhook endpoint (harus sebelum middleware protect)
+router.post('/webhook', order_webhook_1.midtransWebhookHandler);
 // Middleware 'protect' akan diterapkan ke semua rute di bawah ini
 // untuk memastikan hanya pengguna yang sudah login yang bisa mengakses.
 router.use(auth_middleware_1.protect);
@@ -18,6 +20,4 @@ router.put('/:orderId/cancel', order_controller_1.cancelOrderHandler); // <-- 2.
 // Rute untuk mendapatkan detail satu pesanan spesifik
 // Diletakkan terakhir agar tidak konflik dengan rute '/cancel'
 router.get('/:id', order_controller_1.getOrderByIdHandler); // GET  /api/v1/orders/:orderId
-// ✅ Public Midtrans webhook endpoint
-router.post('/webhook', order_webhook_1.midtransWebhookHandler);
 exports.default = router;
