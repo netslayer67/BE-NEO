@@ -120,7 +120,7 @@ export const createOrderHandler = async (
 
     if (paymentMethod === 'va') {
       try {
-        console.log('Creating Midtrans transaction for order:', orderId);
+        console.log('Creating Midtrans transaction for order:', orderId, 'amount:', calculationResult.totalAmount);
         const midtransRes = await createTransaction(
           orderId,
           calculationResult.totalAmount,
@@ -137,7 +137,12 @@ export const createOrderHandler = async (
         );
         midtransSnapToken = midtransRes.token;
         redirectUrl = midtransRes.redirect_url;
-        console.log('Midtrans transaction created successfully:', { orderId, hasToken: !!midtransSnapToken });
+        console.log('Midtrans transaction response:', {
+          orderId,
+          hasToken: !!midtransSnapToken,
+          token: midtransSnapToken ? 'PRESENT' : 'MISSING',
+          redirectUrl: redirectUrl ? 'PRESENT' : 'MISSING'
+        });
       } catch (midtransError) {
         console.error('Midtrans transaction creation failed:', midtransError);
         throw new ApiError(500, 'Failed to create payment transaction. Please try again.');

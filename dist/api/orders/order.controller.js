@@ -113,7 +113,7 @@ const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
         let redirectUrl = null;
         if (paymentMethod === 'va') {
             try {
-                console.log('Creating Midtrans transaction for order:', orderId);
+                console.log('Creating Midtrans transaction for order:', orderId, 'amount:', calculationResult.totalAmount);
                 const midtransRes = yield (0, midtrans_service_1.createTransaction)(orderId, calculationResult.totalAmount, {
                     first_name: req.user.name.split(' ')[0],
                     last_name: req.user.name.split(' ').slice(1).join(' ') || '',
@@ -122,7 +122,12 @@ const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
                 }, Object.assign(Object.assign({}, shippingAddress), { phone: shippingAddress.phone || '' }));
                 midtransSnapToken = midtransRes.token;
                 redirectUrl = midtransRes.redirect_url;
-                console.log('Midtrans transaction created successfully:', { orderId, hasToken: !!midtransSnapToken });
+                console.log('Midtrans transaction response:', {
+                    orderId,
+                    hasToken: !!midtransSnapToken,
+                    token: midtransSnapToken ? 'PRESENT' : 'MISSING',
+                    redirectUrl: redirectUrl ? 'PRESENT' : 'MISSING'
+                });
             }
             catch (midtransError) {
                 console.error('Midtrans transaction creation failed:', midtransError);
