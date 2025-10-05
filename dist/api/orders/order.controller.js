@@ -22,6 +22,7 @@ const apiError_1 = require("../../errors/apiError");
 const midtrans_service_1 = require("../../services/midtrans.service");
 const socket_service_1 = require("../../services/socket.service");
 const order_1 = require("../../utils/order");
+const email_service_1 = require("../../services/email.service");
 /**
  * @desc Membuat pesanan baru & memproses pembayaran dengan Midtrans
  * @route POST /api/v1/orders
@@ -37,8 +38,8 @@ const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
             throw new apiError_1.ApiError(401, 'User not authenticated.');
         if (!(items === null || items === void 0 ? void 0 : items.length))
             throw new apiError_1.ApiError(400, 'Order items cannot be empty.');
-        if (!['online', 'offline'].includes(paymentMethod)) {
-            throw new apiError_1.ApiError(400, 'Invalid payment method.');
+        if (!['va', 'cod'].includes(paymentMethod)) {
+            throw new apiError_1.ApiError(400, 'Invalid payment method. Must be va or cod.');
         }
         const opts = { session };
         let itemsPrice = 0;
@@ -67,8 +68,13 @@ const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
             });
         }
         const orderId = `NEO-${Date.now()}-${(0, uuid_1.v4)().substring(0, 4).toUpperCase()}`;
-        // ✅ Hitung total pakai helper
-        const { totalAmount, shippingPrice, adminFee, discount } = (0, order_1.calculateOrderTotal)(itemsPrice, paymentMethod);
+        // ✅ Hitung total pakai helper dengan shipping calculation
+        const calculationResult = yield (0, order_1.calculateOrderTotal)({
+            itemsPrice,
+            paymentMethod,
+            shippingAddress,
+            weight: 1000 // Default weight, can be calculated from items if needed
+        });
         const newOrder = new order_model_1.Order({
             orderId,
             user: {
@@ -79,12 +85,12 @@ const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
             items: processedItems,
             shippingAddress,
             paymentMethod,
-            itemsPrice,
-            shippingPrice,
-            adminFee,
-            discount,
-            totalAmount,
-            status: paymentMethod === 'online' ? 'Pending Payment' : 'Diproses',
+            itemsPrice: calculationResult.itemsPrice,
+            shippingPrice: calculationResult.shippingPrice,
+            adminFee: calculationResult.adminFee,
+            discount: calculationResult.discount,
+            totalAmount: calculationResult.totalAmount,
+            status: paymentMethod === 'va' ? 'Pending Payment' : 'Diproses',
         });
         yield newOrder.save(opts);
         // 🔔 Emit socket event ke admin/dashboard
@@ -93,7 +99,7 @@ const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
             io.emit('new-order', {
                 orderId: newOrder.orderId,
                 user: req.user.name,
-                total: totalAmount,
+                total: newOrder.totalAmount,
             });
             io.emit('order-status-updated', {
                 orderId: newOrder.orderId,
@@ -105,8 +111,8 @@ const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
         }
         let midtransSnapToken = null;
         let redirectUrl = null;
-        if (paymentMethod === 'online') {
-            const midtransRes = yield (0, midtrans_service_1.createTransaction)(orderId, totalAmount, {
+        if (paymentMethod === 'va') {
+            const midtransRes = yield (0, midtrans_service_1.createTransaction)(orderId, calculationResult.totalAmount, {
                 first_name: req.user.name,
                 email: req.user.email,
             });
@@ -115,6 +121,10 @@ const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
         }
         if (session)
             yield session.commitTransaction();
+        // Send email notification asynchronously (don't block response)
+        setImmediate(() => {
+            (0, email_service_1.sendOrderStatusUpdateEmail)(newOrder);
+        });
         return new apiResponse_1.ApiResponse(res, 201, 'Order created successfully.', {
             order: newOrder,
             midtransSnapToken,
@@ -140,8 +150,26 @@ const getMyOrdersHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
     try {
         if (!req.user)
             throw new apiError_1.ApiError(401, 'Unauthorized');
-        const orders = yield order_model_1.Order.find({ 'user._id': req.user._id }).sort({ createdAt: -1 });
-        return new apiResponse_1.ApiResponse(res, 200, 'Successfully fetched your orders.', orders);
+        // Optimized query with selected fields and pagination
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        const orders = yield order_model_1.Order.find({ 'user._id': req.user._id })
+            .select('orderId items totalAmount status paymentMethod shippingPrice createdAt')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean(); // Use lean() for better performance
+        const totalOrders = yield order_model_1.Order.countDocuments({ 'user._id': req.user._id });
+        return new apiResponse_1.ApiResponse(res, 200, 'Successfully fetched your orders.', {
+            orders,
+            pagination: {
+                page,
+                limit,
+                total: totalOrders,
+                pages: Math.ceil(totalOrders / limit)
+            }
+        });
     }
     catch (error) {
         next(error);

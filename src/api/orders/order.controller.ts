@@ -10,6 +10,7 @@ import { IOrderItem, IShippingAddress } from '../../types';
 import { createTransaction } from '../../services/midtrans.service';
 import { getSocketIO } from '../../services/socket.service';
 import { calculateOrderTotal } from '../../utils/order';
+import { sendOrderStatusUpdateEmail } from '../../services/email.service';
 
 /**
  * @desc Membuat pesanan baru & memproses pembayaran dengan Midtrans
@@ -28,13 +29,13 @@ export const createOrderHandler = async (
     const { items, shippingAddress, paymentMethod } = req.body as {
       items: IOrderItem[];
       shippingAddress: IShippingAddress;
-      paymentMethod: 'online' | 'offline';
+      paymentMethod: 'va' | 'cod';
     };
 
     if (!req.user) throw new ApiError(401, 'User not authenticated.');
     if (!items?.length) throw new ApiError(400, 'Order items cannot be empty.');
-    if (!['online', 'offline'].includes(paymentMethod)) {
-      throw new ApiError(400, 'Invalid payment method.');
+    if (!['va', 'cod'].includes(paymentMethod)) {
+      throw new ApiError(400, 'Invalid payment method. Must be va or cod.');
     }
 
     const opts = { session };
@@ -69,9 +70,13 @@ export const createOrderHandler = async (
 
     const orderId = `NEO-${Date.now()}-${uuidv4().substring(0, 4).toUpperCase()}`;
 
-    // ✅ Hitung total pakai helper
-    const { totalAmount, shippingPrice, adminFee, discount } =
-      calculateOrderTotal(itemsPrice, paymentMethod);
+    // ✅ Hitung total pakai helper dengan shipping calculation
+    const calculationResult = await calculateOrderTotal({
+      itemsPrice,
+      paymentMethod,
+      shippingAddress,
+      weight: 1000 // Default weight, can be calculated from items if needed
+    });
 
     const newOrder = new Order({
       orderId,
@@ -83,12 +88,12 @@ export const createOrderHandler = async (
       items: processedItems,
       shippingAddress,
       paymentMethod,
-      itemsPrice,
-      shippingPrice,
-      adminFee,
-      discount,
-      totalAmount,
-      status: paymentMethod === 'online' ? 'Pending Payment' : 'Diproses',
+      itemsPrice: calculationResult.itemsPrice,
+      shippingPrice: calculationResult.shippingPrice,
+      adminFee: calculationResult.adminFee,
+      discount: calculationResult.discount,
+      totalAmount: calculationResult.totalAmount,
+      status: paymentMethod === 'va' ? 'Pending Payment' : 'Diproses',
     });
 
     await newOrder.save(opts);
@@ -99,7 +104,7 @@ export const createOrderHandler = async (
       io.emit('new-order', {
         orderId: newOrder.orderId,
         user: req.user.name,
-        total: totalAmount,
+        total: newOrder.totalAmount,
       });
       io.emit('order-status-updated', {
         orderId: newOrder.orderId,
@@ -113,8 +118,8 @@ export const createOrderHandler = async (
     let midtransSnapToken: string | null = null;
     let redirectUrl: string | null = null;
 
-    if (paymentMethod === 'online') {
-      const midtransRes = await createTransaction(orderId, totalAmount, {
+    if (paymentMethod === 'va') {
+      const midtransRes = await createTransaction(orderId, calculationResult.totalAmount, {
         first_name: req.user.name,
         email: req.user.email,
       });
@@ -123,6 +128,11 @@ export const createOrderHandler = async (
     }
 
     if (session) await session.commitTransaction();
+
+    // Send email notification asynchronously (don't block response)
+    setImmediate(() => {
+      sendOrderStatusUpdateEmail(newOrder);
+    });
 
     return new ApiResponse(res, 201, 'Order created successfully.', {
       order: newOrder,
@@ -148,8 +158,30 @@ export const getMyOrdersHandler = async (
 ) => {
   try {
     if (!req.user) throw new ApiError(401, 'Unauthorized');
-    const orders = await Order.find({ 'user._id': req.user._id }).sort({ createdAt: -1 });
-    return new ApiResponse(res, 200, 'Successfully fetched your orders.', orders);
+
+    // Optimized query with selected fields and pagination
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    const orders = await Order.find({ 'user._id': req.user._id })
+      .select('orderId items totalAmount status paymentMethod shippingPrice createdAt')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(); // Use lean() for better performance
+
+    const totalOrders = await Order.countDocuments({ 'user._id': req.user._id });
+
+    return new ApiResponse(res, 200, 'Successfully fetched your orders.', {
+      orders,
+      pagination: {
+        page,
+        limit,
+        total: totalOrders,
+        pages: Math.ceil(totalOrders / limit)
+      }
+    });
   } catch (error) {
     next(error);
   }

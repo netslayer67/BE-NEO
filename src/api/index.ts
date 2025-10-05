@@ -5,6 +5,7 @@ import orderRoutes from './orders/order.route';
 import adminRoutes from './admin/admin.route';
 import userRoutes from './users/user.route'; // <--- 1. Impor rute user
 import paymentRoutes from './payment/payment.route';
+import shippingRoutes from './shipping/shipping.route';
 
 const router = Router();
 
@@ -13,6 +14,7 @@ const router = Router();
 // Rute Publik
 router.use('/auth', authRoutes);
 router.use('/products', productRoutes);
+router.use('/shipping', shippingRoutes);
 
 // Rute Terproteksi (memerlukan login)
 router.use('/orders', orderRoutes);

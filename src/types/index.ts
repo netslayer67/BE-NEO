@@ -85,15 +85,17 @@ export interface IOrder extends Document {
     name: string;
     email: string;
   };
-  items: IOrderItem[]; // <- sudah mencakup size
+  items: IOrderItem[];
+  itemsPrice: number;
+  shippingPrice: number;
+  adminFee: number;
+  discount: number;
   totalAmount: number;
   shippingAddress: IShippingAddress;
   status: 'Pending Payment' | 'Diproses' | 'Dikirim' | 'Telah Sampai' | 'Cancelled';
-  paymentMethod?: 'online' | 'offline';
+  paymentMethod: 'va' | 'cod';
   paymentProof?: string;
   transactionId?: string;
-  adminFee: number;
-  discount: number;
   createdAt: Date;
   updatedAt: Date;
 }

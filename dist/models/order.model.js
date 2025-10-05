@@ -3,9 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Order = void 0;
 const mongoose_1 = require("mongoose");
 const orderSchema = new mongoose_1.Schema({
-    orderId: { type: String, required: true, unique: true },
+    orderId: { type: String, required: true, unique: true, index: true },
     user: {
-        _id: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', required: true },
+        _id: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
         name: { type: String, required: true },
         email: { type: String, required: true },
     },
@@ -18,11 +18,13 @@ const orderSchema = new mongoose_1.Schema({
                 type: String,
                 enum: ['S', 'M', 'L', 'XL'],
                 required: true,
-            }, // <-- pindahkan size ke sini
+            },
         }],
-    totalAmount: { type: Number, required: true },
+    itemsPrice: { type: Number, required: true },
+    shippingPrice: { type: Number, required: true, default: 0 },
     adminFee: { type: Number, default: 0 },
     discount: { type: Number, default: 0 },
+    totalAmount: { type: Number, required: true },
     shippingAddress: {
         street: String,
         city: String,
@@ -32,8 +34,8 @@ const orderSchema = new mongoose_1.Schema({
     },
     paymentMethod: {
         type: String,
-        enum: ['online', 'offline'],
-        default: null,
+        enum: ['va', 'cod'],
+        required: true,
     },
     status: {
         type: String,
@@ -43,4 +45,10 @@ const orderSchema = new mongoose_1.Schema({
     paymentProof: { type: String },
     transactionId: { type: String },
 }, { timestamps: true });
+// Add compound indexes for better query performance
+orderSchema.index({ 'user._id': 1, createdAt: -1 });
+orderSchema.index({ status: 1, createdAt: -1 });
+orderSchema.index({ orderId: 1 }); // For fast order lookups
+orderSchema.index({ createdAt: -1 }); // For recent orders
+orderSchema.index({ status: 1, 'user._id': 1 }); // For user-specific status queries
 exports.Order = (0, mongoose_1.model)('Order', orderSchema);

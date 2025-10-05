@@ -2,9 +2,9 @@ import { Schema, model } from 'mongoose';
 import { IOrder } from '../types/index';
 
 const orderSchema = new Schema<IOrder>({
-  orderId: { type: String, required: true, unique: true },
+  orderId: { type: String, required: true, unique: true, index: true },
   user: {
-    _id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    _id: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     name: { type: String, required: true },
     email: { type: String, required: true },
   },
@@ -17,11 +17,13 @@ const orderSchema = new Schema<IOrder>({
       type: String,
       enum: ['S', 'M', 'L', 'XL'],
       required: true,
-    }, // <-- pindahkan size ke sini
+    },
   }],
-  totalAmount: { type: Number, required: true },
+  itemsPrice: { type: Number, required: true },
+  shippingPrice: { type: Number, required: true, default: 0 },
   adminFee: { type: Number, default: 0 },
   discount: { type: Number, default: 0 },
+  totalAmount: { type: Number, required: true },
   shippingAddress: {
     street: String,
     city: String,
@@ -31,8 +33,8 @@ const orderSchema = new Schema<IOrder>({
   },
   paymentMethod: {
     type: String,
-    enum: ['online', 'offline'],
-    default: null,
+    enum: ['va', 'cod'],
+    required: true,
   },
   status: {
     type: String,
@@ -42,6 +44,13 @@ const orderSchema = new Schema<IOrder>({
   paymentProof: { type: String },
   transactionId: { type: String },
 }, { timestamps: true });
+
+// Add compound indexes for better query performance
+orderSchema.index({ 'user._id': 1, createdAt: -1 });
+orderSchema.index({ status: 1, createdAt: -1 });
+orderSchema.index({ orderId: 1 }); // For fast order lookups
+orderSchema.index({ createdAt: -1 }); // For recent orders
+orderSchema.index({ status: 1, 'user._id': 1 }); // For user-specific status queries
 
 
 export const Order = model<IOrder>('Order', orderSchema);

@@ -87,10 +87,33 @@ const sendOrderStatusUpdateEmail = (order) => __awaiter(void 0, void 0, void 0, 
                         <span>${item.name} (x${item.quantity})</span>
                         <span class="size">Ukuran: ${item.size || '-'}</span>
                       </div>
-                      <div>Rp ${item.price.toLocaleString('id-ID')}</div>
+                      <div>Rp ${(item.price * item.quantity).toLocaleString('id-ID')}</div>
                     </div>
                   `).join('')}
-                  <div class="total">Total: Rp ${order.totalAmount.toLocaleString('id-ID')}</div>
+                  <div class="order-item">
+                    <div>Subtotal Produk</div>
+                    <div>Rp ${order.itemsPrice.toLocaleString('id-ID')}</div>
+                  </div>
+                  <div class="order-item">
+                    <div>Biaya Pengiriman</div>
+                    <div>Rp ${order.shippingPrice.toLocaleString('id-ID')}</div>
+                  </div>
+                  ${order.adminFee > 0 ? `
+                  <div class="order-item">
+                    <div>Biaya Admin (COD)</div>
+                    <div>Rp ${order.adminFee.toLocaleString('id-ID')}</div>
+                  </div>
+                  ` : ''}
+                  ${order.discount > 0 ? `
+                  <div class="order-item">
+                    <div>Diskon (VA)</div>
+                    <div>-Rp ${order.discount.toLocaleString('id-ID')}</div>
+                  </div>
+                  ` : ''}
+                  <div class="total">Total Pembayaran: Rp ${order.totalAmount.toLocaleString('id-ID')}</div>
+                  <div style="margin-top: 10px; font-size: 14px; color: #999;">
+                    Metode Pembayaran: ${order.paymentMethod === 'va' ? 'Virtual Account' : 'Cash on Delivery (COD)'}
+                  </div>
                 </div>
                 <p>Kami akan menginformasikan lagi jika status pesanan Anda berubah. Terima kasih telah berbelanja di Neo Dervish.</p>
               </div>
