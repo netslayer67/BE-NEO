@@ -26,16 +26,25 @@ export const createOrderHandler = async (
   if (session) session.startTransaction();
 
   try {
-    const { items, shippingAddress, paymentMethod } = req.body as {
+    const { items, shippingAddress, paymentMethod, type = 'ready-stock' } = req.body as {
       items: IOrderItem[];
       shippingAddress: IShippingAddress;
       paymentMethod: 'va' | 'cod';
+      type?: 'ready-stock' | 'preorder';
     };
 
     if (!req.user) throw new ApiError(401, 'User not authenticated.');
     if (!items?.length) throw new ApiError(400, 'Order items cannot be empty.');
     if (!['va', 'cod'].includes(paymentMethod)) {
       throw new ApiError(400, 'Invalid payment method. Must be va or cod.');
+    }
+    if (!['ready-stock', 'preorder'].includes(type)) {
+      throw new ApiError(400, 'Invalid order type. Must be ready-stock or preorder.');
+    }
+
+    // Restrict preorder payments to VA only
+    if (type === 'preorder' && paymentMethod !== 'va') {
+      throw new ApiError(400, 'Preorder orders must use VA payment method.');
     }
 
     const opts = { session };
@@ -47,15 +56,18 @@ export const createOrderHandler = async (
       if (!product) throw new ApiError(404, `Product with ID ${item.product} not found.`);
       if (!item.size) throw new ApiError(400, `Size is required for '${product.name}'.`);
 
-      const sizeEntry = product.sizes.find(s => s.size === item.size);
-      if (!sizeEntry || sizeEntry.quantity < item.quantity) {
-        throw new ApiError(400, `Insufficient stock for '${product.name}' size ${item.size}.`);
-      }
+      // For preorder orders, skip stock validation and deduction
+      if (type === 'ready-stock') {
+        const sizeEntry = product.sizes.find(s => s.size === item.size);
+        if (!sizeEntry || sizeEntry.quantity < item.quantity) {
+          throw new ApiError(400, `Insufficient stock for '${product.name}' size ${item.size}.`);
+        }
 
-      // Update stock
-      product.stock -= item.quantity;
-      sizeEntry.quantity -= item.quantity;
-      await product.save(opts);
+        // Update stock
+        product.stock -= item.quantity;
+        sizeEntry.quantity -= item.quantity;
+        await product.save(opts);
+      }
 
       itemsPrice += product.price * item.quantity;
 
@@ -88,6 +100,7 @@ export const createOrderHandler = async (
       items: processedItems,
       shippingAddress,
       paymentMethod,
+      type,
       itemsPrice: calculationResult.itemsPrice,
       shippingPrice: calculationResult.shippingPrice,
       adminFee: calculationResult.adminFee,
@@ -264,20 +277,22 @@ export const cancelOrderHandler = async (
       throw new ApiError(400, `Cannot cancel order with status '${order.status}'.`);
     }
 
-    // Restore stock
-    for (const item of order.items) {
-      const product = await Product.findById(item.product).setOptions(opts);
-      if (product) {
-        if (item.size) {
-          const sizeEntry = product.sizes.find(s => s.size === item.size);
-          if (sizeEntry) {
-            sizeEntry.quantity += item.quantity;
-          } else {
-            product.sizes.push({ size: item.size, quantity: item.quantity });
+    // Restore stock only for ready-stock orders
+    if (order.type === 'ready-stock') {
+      for (const item of order.items) {
+        const product = await Product.findById(item.product).setOptions(opts);
+        if (product) {
+          if (item.size) {
+            const sizeEntry = product.sizes.find(s => s.size === item.size);
+            if (sizeEntry) {
+              sizeEntry.quantity += item.quantity;
+            } else {
+              product.sizes.push({ size: item.size, quantity: item.quantity });
+            }
           }
+          product.stock += item.quantity;
+          await product.save(opts);
         }
-        product.stock += item.quantity;
-        await product.save(opts);
       }
     }
 

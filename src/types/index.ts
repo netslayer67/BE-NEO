@@ -94,6 +94,7 @@ export interface IOrder extends Document {
   shippingAddress: IShippingAddress;
   status: 'Pending Payment' | 'Diproses' | 'Dikirim' | 'Telah Sampai' | 'Cancelled';
   paymentMethod: 'va' | 'cod';
+  type: 'ready-stock' | 'preorder';
   paymentProof?: string;
   transactionId?: string;
   createdAt: Date;

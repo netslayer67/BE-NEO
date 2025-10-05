@@ -33,13 +33,20 @@ const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
     if (session)
         session.startTransaction();
     try {
-        const { items, shippingAddress, paymentMethod } = req.body;
+        const { items, shippingAddress, paymentMethod, type = 'ready-stock' } = req.body;
         if (!req.user)
             throw new apiError_1.ApiError(401, 'User not authenticated.');
         if (!(items === null || items === void 0 ? void 0 : items.length))
             throw new apiError_1.ApiError(400, 'Order items cannot be empty.');
         if (!['va', 'cod'].includes(paymentMethod)) {
             throw new apiError_1.ApiError(400, 'Invalid payment method. Must be va or cod.');
+        }
+        if (!['ready-stock', 'preorder'].includes(type)) {
+            throw new apiError_1.ApiError(400, 'Invalid order type. Must be ready-stock or preorder.');
+        }
+        // Restrict preorder payments to VA only
+        if (type === 'preorder' && paymentMethod !== 'va') {
+            throw new apiError_1.ApiError(400, 'Preorder orders must use VA payment method.');
         }
         const opts = { session };
         let itemsPrice = 0;
@@ -50,14 +57,17 @@ const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
                 throw new apiError_1.ApiError(404, `Product with ID ${item.product} not found.`);
             if (!item.size)
                 throw new apiError_1.ApiError(400, `Size is required for '${product.name}'.`);
-            const sizeEntry = product.sizes.find(s => s.size === item.size);
-            if (!sizeEntry || sizeEntry.quantity < item.quantity) {
-                throw new apiError_1.ApiError(400, `Insufficient stock for '${product.name}' size ${item.size}.`);
+            // For preorder orders, skip stock validation and deduction
+            if (type === 'ready-stock') {
+                const sizeEntry = product.sizes.find(s => s.size === item.size);
+                if (!sizeEntry || sizeEntry.quantity < item.quantity) {
+                    throw new apiError_1.ApiError(400, `Insufficient stock for '${product.name}' size ${item.size}.`);
+                }
+                // Update stock
+                product.stock -= item.quantity;
+                sizeEntry.quantity -= item.quantity;
+                yield product.save(opts);
             }
-            // Update stock
-            product.stock -= item.quantity;
-            sizeEntry.quantity -= item.quantity;
-            yield product.save(opts);
             itemsPrice += product.price * item.quantity;
             processedItems.push({
                 product,
@@ -85,6 +95,7 @@ const createOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
             items: processedItems,
             shippingAddress,
             paymentMethod,
+            type,
             itemsPrice: calculationResult.itemsPrice,
             shippingPrice: calculationResult.shippingPrice,
             adminFee: calculationResult.adminFee,
@@ -237,21 +248,23 @@ const cancelOrderHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
         if (!cancellableStatuses.includes(order.status)) {
             throw new apiError_1.ApiError(400, `Cannot cancel order with status '${order.status}'.`);
         }
-        // Restore stock
-        for (const item of order.items) {
-            const product = yield product_model_1.Product.findById(item.product).setOptions(opts);
-            if (product) {
-                if (item.size) {
-                    const sizeEntry = product.sizes.find(s => s.size === item.size);
-                    if (sizeEntry) {
-                        sizeEntry.quantity += item.quantity;
+        // Restore stock only for ready-stock orders
+        if (order.type === 'ready-stock') {
+            for (const item of order.items) {
+                const product = yield product_model_1.Product.findById(item.product).setOptions(opts);
+                if (product) {
+                    if (item.size) {
+                        const sizeEntry = product.sizes.find(s => s.size === item.size);
+                        if (sizeEntry) {
+                            sizeEntry.quantity += item.quantity;
+                        }
+                        else {
+                            product.sizes.push({ size: item.size, quantity: item.quantity });
+                        }
                     }
-                    else {
-                        product.sizes.push({ size: item.size, quantity: item.quantity });
-                    }
+                    product.stock += item.quantity;
+                    yield product.save(opts);
                 }
-                product.stock += item.quantity;
-                yield product.save(opts);
             }
         }
         order.status = 'Cancelled';

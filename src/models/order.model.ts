@@ -41,6 +41,12 @@ const orderSchema = new Schema<IOrder>({
     enum: ['Pending Payment', 'Diproses', 'Dikirim', 'Telah Sampai', 'Cancelled'],
     default: 'Pending Payment',
   },
+  type: {
+    type: String,
+    enum: ['ready-stock', 'preorder'],
+    default: 'ready-stock',
+    required: true,
+  },
   paymentProof: { type: String },
   transactionId: { type: String },
 }, { timestamps: true });
